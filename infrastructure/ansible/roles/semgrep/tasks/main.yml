@@ -1,0 +1,15 @@
+- name: Install semgrep
+  ansible.builtin.command:
+    cmd: pipx install semgrep
+    creates: ~/.local/bin/semgrep
+  register: semgrep_install
+  retries: 3
+  delay: 5
+  until: semgrep_install is not failed
+
+- name: Symlink semgrep
+  ansible.builtin.file:
+    src: "{{ ansible_user_dir }}/.local/bin/semgrep"
+    dest: /usr/local/bin/semgrep
+    state: link
+  become: true

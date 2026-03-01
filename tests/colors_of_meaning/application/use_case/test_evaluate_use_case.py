@@ -49,7 +49,7 @@ class TestEvaluateUseCase:
 
         use_case.execute()
 
-        mock_dataset_repository.get_samples.assert_any_call(split="train")
+        mock_dataset_repository.get_samples.assert_any_call(split="train", max_samples=None)
 
     def test_should_load_test_dataset_from_repository(
         self,
@@ -68,7 +68,7 @@ class TestEvaluateUseCase:
 
         use_case.execute()
 
-        mock_dataset_repository.get_samples.assert_any_call(split="test")
+        mock_dataset_repository.get_samples.assert_any_call(split="test", max_samples=None)
 
     def test_should_fit_classifier_with_train_samples(
         self,

@@ -19,7 +19,7 @@ class TrainArgs:
     config: str = "configs/base.yaml"
     dataset_path: str = "data/train.txt"
     output_model: str = "artifacts/models/projector.pth"
-    output_codebook: str = "artifacts/codebooks/codebook_4096"
+    output_codebook: str = "codebook_4096"
 
 
 def main(args: TrainArgs) -> None:
@@ -56,7 +56,7 @@ def main(args: TrainArgs) -> None:
     )
 
     print(f"Model saved to {args.output_model}")
-    print(f"Codebook saved to {args.output_codebook}.pkl")
+    print(f"Codebook saved to artifacts/codebooks/{args.output_codebook}.pkl")
 
 
 if __name__ == "__main__":

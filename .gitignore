@@ -56,3 +56,9 @@ MANIFEST
 .venv*/
 .conda*/
 .python-version
+
+# Artifacts (models, codebooks, encoded documents)
+artifacts/
+
+# Training data (sample data is tracked separately)
+data/train.txt

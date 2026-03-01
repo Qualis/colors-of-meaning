@@ -24,4 +24,4 @@ dataset:
   name: ag_news
   train_split: train
   test_split: test
-  max_samples: null
+  max_samples: 12000

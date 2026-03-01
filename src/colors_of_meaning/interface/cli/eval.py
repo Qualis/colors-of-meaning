@@ -40,6 +40,7 @@ from colors_of_meaning.application.use_case.encode_document_use_case import (
 from colors_of_meaning.application.use_case.evaluate_use_case import (
     EvaluateUseCase,
 )
+from colors_of_meaning.domain.model.evaluation_result import EvaluationResult
 from colors_of_meaning.domain.repository.dataset_repository import DatasetRepository
 
 
@@ -49,7 +50,7 @@ class EvalArgs:
     dataset: Literal["ag_news", "imdb", "newsgroups"] = "ag_news"
     method: Literal["color", "tfidf", "hnsw"] = "color"
     model_path: str = "artifacts/models/projector.pth"
-    codebook_path: str = "artifacts/codebooks/codebook_4096"
+    codebook_path: str = "codebook_4096"
     k_neighbors: int = 5
 
 
@@ -83,7 +84,7 @@ def _create_color_classifier(args: EvalArgs, config: SynestheticConfig) -> tuple
     quantized_mapper = QuantizedColorMapper(color_mapper, codebook)
     encode_use_case = EncodeDocumentUseCase(quantized_mapper)
     classifier = ColorHistogramClassifier(
-        embedding_adapter, encode_use_case, WassersteinDistanceCalculator(), args.k_neighbors
+        embedding_adapter, encode_use_case, WassersteinDistanceCalculator(), k=args.k_neighbors
     )
     return classifier, 12.0
 
@@ -101,13 +102,7 @@ def _create_classifier(args: EvalArgs, config: SynestheticConfig) -> tuple:
         raise ValueError(f"Unknown method: {args.method}")
 
 
-def main(args: EvalArgs) -> None:
-    config = SynestheticConfig.from_yaml(args.config)
-    dataset_repo = _setup_dataset(args.dataset)
-    classifier, bits_per_token = _create_classifier(args, config)
-    evaluate_use_case = EvaluateUseCase(classifier, SklearnMetricsCalculator(), dataset_repo)
-    print(f"Evaluating on {args.dataset} with {args.method} method...")
-    result = evaluate_use_case.execute(bits_per_token=bits_per_token)
+def _print_results(args: EvalArgs, result: EvaluationResult) -> None:
     print("\n=== Evaluation Results ===")
     print(f"Dataset: {args.dataset}")
     print(f"Method: {args.method}")
@@ -119,6 +114,18 @@ def main(args: EvalArgs) -> None:
             print(f"Recall@{k}: {recall:.4f}")
     if result.bits_per_token is not None:
         print(f"Bits per token: {result.bits_per_token:.2f}")
+
+
+def main(args: EvalArgs) -> None:
+    config = SynestheticConfig.from_yaml(args.config)
+    dataset_repo = _setup_dataset(args.dataset)
+    classifier, bits_per_token = _create_classifier(args, config)
+    evaluate_use_case = EvaluateUseCase(classifier, SklearnMetricsCalculator(), dataset_repo)
+    max_samples = config.dataset.max_samples if hasattr(config.dataset, "max_samples") else None
+    limit_msg = f" (limited to {max_samples} samples per split)" if max_samples else ""
+    print(f"Evaluating on {args.dataset} with {args.method} method{limit_msg}...")
+    result = evaluate_use_case.execute(bits_per_token=bits_per_token, max_samples=max_samples)
+    _print_results(args, result)
 
 
 if __name__ == "__main__":

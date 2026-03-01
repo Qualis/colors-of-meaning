@@ -162,9 +162,6 @@ class TestEvalCLI:
         mock_codebook_repo.load.return_value = mock_codebook
         mock_codebook_repo_class.return_value = mock_codebook_repo
 
-        mock_distance_calc = Mock()
-        mock_distance_calc_class.return_value = mock_distance_calc
-
         mock_quantized_mapper = Mock()
         mock_quantized_mapper_class.return_value = mock_quantized_mapper
 

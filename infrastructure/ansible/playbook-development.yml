@@ -64,6 +64,7 @@
     - pyscaffold
     - tox
     - claude-code
+    - semgrep
     - shellcheck
     - ansible-lint
 
