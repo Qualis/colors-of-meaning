@@ -10,7 +10,7 @@
 
 This project implements the **Colors of Meaning** experiment described in [the research article](https://www.qual.is/posts/colors-of-meaning), which explores a novel approach to semantic understanding through synesthesia.
 
-The core idea is to map semantic embeddings into perceptual color space (CIE Lab), creating a synesthetic representation where documents are color distributions rather than high-dimensional vectors. Rather than working with abstract 384-dimensional embeddings, we translate semantic meaning into the intuitive language of color—hue, lightness, and saturation. This approach achieves extreme compression (1000x+) while maintaining interpretable semantic structure, opening new possibilities for understanding how meaning relates to perception.
+The core idea is to map semantic embeddings into perceptual color space (CIE Lab), creating a synesthetic representation where documents are color distributions rather than high-dimensional vectors. Rather than working with abstract 384-dimensional embeddings, we translate semantic meaning into the intuitive language of color: hue, lightness, and saturation. This approach achieves extreme compression (1000x+) while maintaining interpretable semantic structure, opening new possibilities for understanding how meaning relates to perception.
 
 ### Key Features
 
@@ -34,7 +34,7 @@ The core idea is to map semantic embeddings into perceptual color space (CIE Lab
 - ✅ **Phase 2**: Evaluation pipeline and baselines
 - ⏳ **Phase 3**: Visualizations and interpretability analysis
 
-**Test Coverage**: 100% (468 tests passing)
+**Test Coverage**: 100% (476 tests passing)
 **Quality Gates**: All passing (flake8, black, bandit, semgrep, xenon, mypy, pip-audit)
 
 ## Quick Start
@@ -98,7 +98,7 @@ python -m colors_of_meaning.interface.cli.eval \
 - `--k-neighbors`: Number of neighbors for k-NN methods (default: 5)
 - `--config`: Configuration file (default: `configs/base.yaml`)
 - `--model-path`: Path to trained projector model (default: `artifacts/models/projector.pth`)
-- `--codebook-path`: Path to color codebook (default: `artifacts/codebooks/codebook_4096`)
+- `--codebook-path`: Color codebook name (default: `codebook_4096`, resolved from `artifacts/codebooks/`)
 
 ### Training
 
@@ -209,42 +209,52 @@ The architectural structure and design rules for this project uses a combination
 ### Project Structure Overview
 
 ```
-project/
+colors_of_meaning/
 
  application/                       # Use cases
     use_case/
-        coconut_use_case.py
-    service/
-        example_service.py
+        train_color_mapping_use_case.py
+        encode_document_use_case.py
+        compare_documents_use_case.py
+        compress_document_use_case.py
+        evaluate_use_case.py
 
  domain/                            # Business logic
-    authentication/
-        authentitator.py
-    health/
-        health_status.py
     model/
-        coconut.py
+        lab_color.py
+        color_codebook.py
+        colored_document.py
+        evaluation_sample.py
+        evaluation_result.py
     repository/
-        coconut_repository.py
+        color_codebook_repository.py
+        dataset_repository.py
     service/
-        example_data_import_service.py
+        color_mapper.py
+        distance_calculator.py
+        classifier.py
+        retriever.py
+        metrics_calculator.py
 
  infrastructure/                    # Adapters, drivers
-    observability/
-        logger.py
-        metrics.py
-        tracing.py
+    dataset/
+        ag_news_dataset_adapter.py
+        imdb_dataset_adapter.py
+        newsgroups_dataset_adapter.py
+    embedding/
+        sentence_embedding_adapter.py
+    evaluation/
+        color_histogram_classifier.py
+        hnsw_classifier.py
+        tfidf_classifier.py
+        sklearn_metrics_calculator.py
+    ml/
+        pytorch_color_mapper.py
+        wasserstein_distance_calculator.py
+        jensen_shannon_distance_calculator.py
     persistence/
-        in_memory_coconut_command_repository.py
-        in_memory_coconut_query_repository.py
-    cache/
-        cache_provider.py
-    message/
-        message_producer.py
-        message_consumer.py
-    importer/
-        example_importer.py
-        base_importer.py
+        file_color_codebook_repository.py
+        in_memory/
     security/
         basic_authentication.py
     system/
@@ -254,19 +264,19 @@ project/
     api/
         main.py
         controller/
-            coconut_controller.py
             health_controller.py
         data_transfer_object/
-            coconut_data_transfer_object.py
-            health_status_data_transfer_object.py
+    cli/
+        train.py
+        encode.py
+        compare.py
+        compress.py
+        eval.py
 
  shared/                            # Cross-cutting concerns
     configuration.py
-    resilience/
-        retry.py
-        circuit_breaker.py
-    formatter/
-        example_formatter.py
+    lab_utils.py
+    synesthetic_config.py
 ```
 
 ---
@@ -275,9 +285,9 @@ project/
 
 #### Domain
 
-- `model/` contain pure domain entities (e.g., `DataRecord`)
+- `model/` contain pure domain entities (e.g., `LabColor`, `ColorCodebook`, `ColoredDocument`)
 - `repository/` define interfaces for persistence (abstract base classes)
-- `service/` contain stateless domain logic (business rules)
+- `service/` define domain service interfaces (e.g., `ColorMapper`, `DistanceCalculator`, `Classifier`)
 
 #### Application
 
@@ -286,22 +296,25 @@ project/
 
 #### Infrastructure
 
-- Implements interfaces from `domain.repository`
-- `importer/` handles imports
+- Implements interfaces from `domain.repository` and `domain.service`
+- `ml/` contains PyTorch color mapper and distance calculators
+- `evaluation/` provides classifier implementations (TF-IDF, HNSW, color histogram)
+- `dataset/` adapts external datasets (AG News, IMDB, 20 Newsgroups)
+- `embedding/` wraps sentence-transformers for text encoding
 - `security/` provides token-based authentication
 - `system/` contains diagnostics (e.g., disk, database checks)
-- `observability/` provides logging, tracing decorators
 
 #### Interface
 
 - `api/controller/` expose `FastAPI` routes and depend on use cases
 - `api/data_transfer_object/` define `Pydantic` model for request/response shaping
-- `cli/` optionally runs scripts or command-line tools
+- `cli/` provides command-line tools for training, encoding, evaluation, and compression
 
 #### Shared
 
-- `formatter/` contains reusable utility classes for formatting (e.g., date/time conversion)
-- `configuration.py` loads settings
+- `lab_utils.py` provides RGB/Lab conversion and Delta E distance
+- `synesthetic_config.py` loads YAML-based experiment configuration
+- `configuration.py` loads application settings
 
 ---
 
