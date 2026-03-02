@@ -103,3 +103,87 @@ class TestCompressCLI:
         main(args)
 
         mock_use_case.execute_batch.assert_called_once()
+
+    @patch("colors_of_meaning.interface.cli.compress.np")
+    @patch("colors_of_meaning.interface.cli.compress.CompressionComparisonUseCase")
+    @patch("colors_of_meaning.interface.cli.compress.GzipCompressionBaseline")
+    @patch("colors_of_meaning.interface.cli.compress.PQCompressionBaseline")
+    @patch("builtins.print")
+    def test_should_run_baseline_comparison(
+        self,
+        mock_print: Mock,
+        mock_pq_class: Mock,
+        mock_gzip_class: Mock,
+        mock_comparison_class: Mock,
+        mock_np: Mock,
+        tmp_path: Path,
+    ) -> None:
+        mock_np.load.return_value = np.random.randn(10, 384).astype(np.float32)
+
+        mock_comparison = Mock()
+        mock_comparison.execute.return_value = [
+            {
+                "method": "gzip",
+                "compressed_size_bits": 500,
+                "original_size_bits": 1000,
+                "compression_ratio": 2.0,
+                "bits_per_token": 50.0,
+                "reconstruction_error": 0.0,
+            },
+            {
+                "method": "pq_m48_k256",
+                "compressed_size_bits": 200,
+                "original_size_bits": 1000,
+                "compression_ratio": 5.0,
+                "bits_per_token": 20.0,
+                "reconstruction_error": 0.01,
+            },
+        ]
+        mock_comparison_class.return_value = mock_comparison
+
+        args = CompressArgs(
+            compare_baselines=True,
+            embeddings_path=str(tmp_path / "embeddings.npy"),
+        )
+
+        main(args)
+
+        mock_comparison.execute.assert_called_once()
+
+    @patch("colors_of_meaning.interface.cli.compress.np")
+    @patch("colors_of_meaning.interface.cli.compress.CompressionComparisonUseCase")
+    @patch("colors_of_meaning.interface.cli.compress.GzipCompressionBaseline")
+    @patch("colors_of_meaning.interface.cli.compress.PQCompressionBaseline")
+    @patch("builtins.print")
+    def test_should_handle_none_reconstruction_error(
+        self,
+        mock_print: Mock,
+        mock_pq_class: Mock,
+        mock_gzip_class: Mock,
+        mock_comparison_class: Mock,
+        mock_np: Mock,
+        tmp_path: Path,
+    ) -> None:
+        mock_np.load.return_value = np.random.randn(10, 384).astype(np.float32)
+
+        mock_comparison = Mock()
+        mock_comparison.execute.return_value = [
+            {
+                "method": "test",
+                "compressed_size_bits": 500,
+                "original_size_bits": 1000,
+                "compression_ratio": 2.0,
+                "bits_per_token": 50.0,
+                "reconstruction_error": None,
+            },
+        ]
+        mock_comparison_class.return_value = mock_comparison
+
+        args = CompressArgs(
+            compare_baselines=True,
+            embeddings_path=str(tmp_path / "embeddings.npy"),
+        )
+
+        main(args)
+
+        assert mock_print.call_count > 0

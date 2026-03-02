@@ -1,0 +1,34 @@
+projector:
+  embedding_dim: 384
+  hidden_dim_1: 128
+  hidden_dim_2: 64
+  output_dim: 3
+  dropout_rate: 0.1
+
+codebook:
+  bins_per_dimension: 16
+  num_bins: 4096
+
+training:
+  batch_size: 32
+  learning_rate: 0.001
+  epochs: 100
+  seed: 42
+  device: cpu
+
+distance:
+  metric: wasserstein
+  smoothing_epsilon: 1.0e-8
+
+dataset:
+  name: ag_news
+  train_split: train
+  test_split: test
+  max_samples: 12000
+
+structured_mapper:
+  alpha: 1.0
+  beta: 1.0
+  gamma: 1.0
+  num_clusters: 16
+  max_chroma: 128.0

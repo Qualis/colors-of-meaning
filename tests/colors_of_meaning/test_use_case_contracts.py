@@ -10,10 +10,16 @@ from colors_of_meaning.application.use_case.compare_documents_use_case import (
 from colors_of_meaning.application.use_case.compress_document_use_case import (
     CompressDocumentUseCase,
 )
+from colors_of_meaning.application.use_case.compression_comparison_use_case import (
+    CompressionComparisonUseCase,
+)
 from colors_of_meaning.application.use_case.encode_document_use_case import (
     EncodeDocumentUseCase,
 )
 from colors_of_meaning.application.use_case.evaluate_use_case import EvaluateUseCase
+from colors_of_meaning.application.use_case.query_by_palette_use_case import (
+    QueryByPaletteUseCase,
+)
 from colors_of_meaning.application.use_case.train_color_mapping_use_case import (
     TrainColorMappingUseCase,
 )
@@ -23,9 +29,12 @@ from colors_of_meaning.application.use_case.visualize_codebook_use_case import (
 from colors_of_meaning.application.use_case.visualize_documents_use_case import (
     VisualizeDocumentsUseCase,
 )
+from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
 from colors_of_meaning.domain.model.evaluation_result import EvaluationResult
 from colors_of_meaning.domain.model.evaluation_sample import EvaluationSample
+from colors_of_meaning.domain.model.lab_color import LabColor
+from colors_of_meaning.domain.service.compression_baseline import CompressedResult
 
 
 class TestEncodeDocumentContract:
@@ -325,3 +334,88 @@ class TestVisualizeDocumentsContract:
         use_case.execute_confusion_matrix([0, 1, 0], [0, 1, 1], ["a", "b"], "/output/cm.png")
 
         mock_renderer.render_confusion_matrix.assert_called_once()
+
+
+class TestCompressionComparisonContract:
+    def test_should_return_list_of_results(self) -> None:
+        mock_baseline = Mock()
+        mock_baseline.name.return_value = "gzip"
+        mock_baseline.compress.return_value = CompressedResult(compressed_size_bits=500, original_size_bits=1000)
+
+        use_case = CompressionComparisonUseCase(baselines=[mock_baseline])
+        results = use_case.execute(np.random.randn(10, 8).astype(np.float32))
+
+        assert isinstance(results, list)
+
+    def test_should_include_method_name_in_results(self) -> None:
+        mock_baseline = Mock()
+        mock_baseline.name.return_value = "test_method"
+        mock_baseline.compress.return_value = CompressedResult(compressed_size_bits=500, original_size_bits=1000)
+
+        use_case = CompressionComparisonUseCase(baselines=[mock_baseline])
+        results = use_case.execute(np.random.randn(10, 8).astype(np.float32))
+
+        assert results[0]["method"] == "test_method"
+
+    def test_should_call_compress_on_each_baseline(self) -> None:
+        mock_b1 = Mock()
+        mock_b1.name.return_value = "b1"
+        mock_b1.compress.return_value = CompressedResult(compressed_size_bits=500, original_size_bits=1000)
+        mock_b2 = Mock()
+        mock_b2.name.return_value = "b2"
+        mock_b2.compress.return_value = CompressedResult(compressed_size_bits=200, original_size_bits=1000)
+
+        use_case = CompressionComparisonUseCase(baselines=[mock_b1, mock_b2])
+        embeddings = np.random.randn(5, 8).astype(np.float32)
+        use_case.execute(embeddings)
+
+        mock_b1.compress.assert_called_once()
+        mock_b2.compress.assert_called_once()
+
+
+class TestQueryByPaletteContract:
+    def test_should_return_list_of_matches(self) -> None:
+        mock_compare = Mock()
+        mock_compare.find_nearest_neighbors.return_value = [("doc_1", 0.5)]
+
+        codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=2)
+        use_case = QueryByPaletteUseCase(mock_compare, codebook)
+
+        results = use_case.execute(
+            palette=[(LabColor(l=50, a=0, b=0), 1.0)],
+            corpus_docs=[],
+            k=5,
+        )
+
+        assert isinstance(results, list)
+
+    def test_should_delegate_to_compare_use_case(self) -> None:
+        mock_compare = Mock()
+        mock_compare.find_nearest_neighbors.return_value = []
+
+        codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=2)
+        use_case = QueryByPaletteUseCase(mock_compare, codebook)
+
+        use_case.execute(
+            palette=[(LabColor(l=50, a=0, b=0), 1.0)],
+            corpus_docs=[],
+            k=3,
+        )
+
+        mock_compare.find_nearest_neighbors.assert_called_once()
+
+    def test_should_pass_k_to_compare_use_case(self) -> None:
+        mock_compare = Mock()
+        mock_compare.find_nearest_neighbors.return_value = []
+
+        codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=2)
+        use_case = QueryByPaletteUseCase(mock_compare, codebook)
+
+        use_case.execute(
+            palette=[(LabColor(l=50, a=0, b=0), 1.0)],
+            corpus_docs=[],
+            k=7,
+        )
+
+        call_kwargs = mock_compare.find_nearest_neighbors.call_args
+        assert call_kwargs[1].get("k") == 7 or call_kwargs[0][2] == 7

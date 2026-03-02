@@ -43,12 +43,26 @@ class DatasetConfig:
 
 
 @dataclass
+class StructuredMapperConfig:
+    alpha: float = 1.0
+    beta: float = 1.0
+    gamma: float = 1.0
+    num_clusters: int = 16
+    max_chroma: float = 128.0
+
+
+@dataclass
 class SynestheticConfig:
     projector: ProjectorConfig
     codebook: CodebookConfig
     training: TrainingConfig
     distance: DistanceConfig
     dataset: DatasetConfig
+    structured_mapper: Optional[StructuredMapperConfig] = None
+
+    def __post_init__(self) -> None:
+        if self.structured_mapper is None:
+            self.structured_mapper = StructuredMapperConfig()
 
     @classmethod
     def from_yaml(cls, path: str) -> "SynestheticConfig":
@@ -61,6 +75,7 @@ class SynestheticConfig:
             training=TrainingConfig(**config_dict.get("training", {})),
             distance=DistanceConfig(**config_dict.get("distance", {})),
             dataset=DatasetConfig(**config_dict.get("dataset", {})),
+            structured_mapper=StructuredMapperConfig(**config_dict.get("structured_mapper", {})),
         )
 
     def to_yaml(self, path: str) -> None:
@@ -70,6 +85,7 @@ class SynestheticConfig:
             "training": self.training.__dict__,
             "distance": self.distance.__dict__,
             "dataset": self.dataset.__dict__,
+            "structured_mapper": self.structured_mapper.__dict__,
         }
 
         Path(path).parent.mkdir(parents=True, exist_ok=True)
