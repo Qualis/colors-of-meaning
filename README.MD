@@ -327,9 +327,15 @@ tox -e format
 
 ## Architecture
 
-The architectural structure and design rules for this project uses a combination of Hexagonal Architecture and Domain-Driven Design (`DDD`) principles. The architecture is organized into clearly separated domain, application, infrastructure, and interface layers, following clean architecture principles. The domain layer encapsulates entities and business rules, the application layer manages orchestration through use cases, infrastructure contains data persistence implementations with repositories, and the interface layer provides `RESTful` `API` routes. The structure emphasizes high test coverage, maintainability, and security by design.
+This project follows Hexagonal Architecture (Ports and Adapters) combined with Domain-Driven Design principles:
 
----
+- **Domain Layer**: Pure business logic, entities, repository interfaces (ABCs), and service interfaces
+- **Application Layer**: Use case orchestration, no direct framework or IO dependencies
+- **Infrastructure Layer**: Technical adapters implementing domain interfaces (ML, datasets, persistence, visualization)
+- **Interface Layer**: FastAPI controllers, Pydantic DTOs, and CLI tools
+- **Shared Layer**: Cross-cutting concerns (configuration, Lab utilities)
+
+For comprehensive architectural rules, coding standards, testing requirements, and development guidelines, see [`.claude/CLAUDE.md`](.claude/CLAUDE.md).
 
 ### Project Structure Overview
 
@@ -420,8 +426,6 @@ colors_of_meaning/
     synesthetic_config.py
 ```
 
----
-
 ### Design Principles
 
 #### Domain
@@ -458,111 +462,35 @@ colors_of_meaning/
 - `synesthetic_config.py` loads YAML-based experiment configuration (projector, codebook, training, distance, dataset, structured mapper settings)
 - `configuration.py` loads application settings
 
----
+## Engineering Practices
 
-### Dependency Injection
+- 100% test coverage (680 tests)
+- Dependency injection using [Lagom](https://github.com/meadsteve/lagom)
+- Structured logging with correlation IDs
+- Consumer-Driven Contract Testing (CDCT)
+- Security scanning and static analysis (flake8, black, bandit, xenon, mypy, semgrep, pip-audit)
+- Docker containerization with multi-arch builds (amd64, arm64)
+- Infrastructure as Code (Ansible)
 
-This project uses the dependency injection pattern to enhance modularity, testability, and maintainability, with [Lagom](https://github.com/meadsteve/lagom) as the dependency injection framework.
+## Claude Code Skills
 
-#### Key Principles
+This project includes [Claude Code skills](.claude/skills/README.md) for development assistance:
 
-- **Inversion of Control**: Dependencies are provided to components rather than created internally.
-- **Interface-based Programming**: Components depend on abstractions (interfaces) rather than concrete implementations.
-- **Single Responsibility**: Each component focuses on its core functionality, with dependencies injected as needed.
-- **Testability**: Allows easy replacement of dependencies with test doubles (mocks, stubs) in unit tests.
+- **Hexagonal Architecture Scaffolder** - Scaffold features across all architecture layers
+- **Test Generator** - Generate tests following the one-assertion-per-test rule
+- **Self-Documenting Refactor** - Enforce the no-comments policy
+- **Property-Based Testing** - Identify and implement property-based tests
+- **Test-Driven Development** - Red-Green-Refactor cycle enforcement
+- **Systematic Debugging** - Root cause investigation methodology
+- **Verification Before Completion** - Evidence-based completion verification
 
-#### Using `Lagom` for Dependency Injection
+## Contributing
 
-`Lagom` provides a lightweight, Pythonic approach to dependency injection with features that align well with our architecture:
+When contributing to this project:
 
-- **Type-based Resolution**: Dependencies are resolved based on type annotations.
-- **Singletons and Transients**: Support for both singleton (shared) and transient (new instance per request) dependencies.
-- **Contextual Containers**: Create specialized containers for different application contexts (e.g., testing vs. production).
-
----
-
-### Enhancing System Quality
-
-#### Performance and Scalability
-
-- Implement caching strategies (`Redis`) for frequently accessed data.
-- Use message queues (`Pub/Sub`) for asynchronous tasks.
-
-#### Reliability and Fault Tolerance
-
-- Explicitly define retry and circuit breaker strategies.
-- Clearly document error handling and recovery procedures.
-
-#### Maintainability and Modularity
-
-- Clearly define module boundaries and use explicit interfaces (`ABC`).
-
-#### Observability and Monitoring
-
-- Structured logging with `correlation-id`.
-- Metrics collection and distributed tracing.
-
-#### Security
-
-- Auditing of key domain events.
-- Secure management of secrets (`Vault`).
-
-#### Availability
-
-- Explicit fall-back or degraded-service strategies.
-- Robust health-check mechanisms.
-
-#### Testability
-
-- Include integration and end-to-end tests for core functionality.
-- Contract testing for integrations.
-
-#### Portability
-
-- Containerization strategy (`Docker`).
-- Infrastructure as code (`Terraform`, `Ansible`, `Packer`).
-
----
-
-### Coding Conventions
-
-#### General
-
-- No comments: code should be self-documenting and expressive
-- Descriptive naming: variables, functions, and classes should clearly communicate their intent
-- Include `__init__.py` files in each Python package to clearly define module boundaries and support tools like `linters`, test runners, and code navigation.
-
-#### Testing
-
-- 100% test coverage is expected
-- Tests should be meaningful and not just aim to increase coverage
-- Mocks/stubs should be used where necessary to isolate behaviour
-- Tests should include only one assertion per test case
-- Test names should be phrased as a sentence clearly reflecting the behaviour being asserted
-  - **Example:** `test_should_return_404_when_resource_is_not_found()`
-- Consumer Driven Contract Testing (`CDCT`) consumer tests are required for any internal service called, and producer tests for `API` routes provided by this project.
-- Architectural Unit Testing should be used to assert that the code aligns with the principles defined in this document.
-
-#### Static Analysis
-
-Code must pass the following tools before merging:
-
-| Tool                | Purpose                                            |
-|---------------------|----------------------------------------------------|
-| `flake8`            | `Linting` and style checking                       |
-| `black`             | Code formatting                                    |
-| `bandit`            | Security scanning for common issues                |
-| `xenon`             | Maintainability and complexity limits              |
-| `mypy`              | Static type checking                               |
-| `semgrep`           | Static analysis for code patterns and security     |
-| `pip-audit`         | Dependency vulnerability scanning                  |
-
----
-
-By following these conventions, the code remains:
-
-- Clean and easy to reason about
-- Secure by default
-- Readable by both humans and tools
-- Easy to `refactor` and scale with confidence
-- Loosely coupled through dependency injection
+1. Review [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for detailed coding standards and architectural rules
+2. Ensure all tests pass: `tox`
+3. Format code before committing: `tox -e format`
+4. Maintain 100% test coverage
+5. Follow the one-assertion-per-test rule
+6. Respect layer boundaries (see [`.claude/CLAUDE.md`](.claude/CLAUDE.md))

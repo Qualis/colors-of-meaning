@@ -1,5 +1,6 @@
 # Development environment
-.claude
+.claude/settings.local.json
+.claude/prompts/
 .vagrant
 
 # Temporary and binary files
