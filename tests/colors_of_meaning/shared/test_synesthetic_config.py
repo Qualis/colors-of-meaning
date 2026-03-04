@@ -8,6 +8,7 @@ from colors_of_meaning.shared.synesthetic_config import (
     DistanceConfig,
     DatasetConfig,
     StructuredMapperConfig,
+    SupervisedMapperConfig,
 )
 
 
@@ -254,3 +255,74 @@ class TestStructuredMapperConfig:
         config = StructuredMapperConfig()
 
         assert config.max_chroma == 128.0
+
+
+class TestSupervisedMapperConfig:
+    def test_should_have_default_classification_weight(self) -> None:
+        config = SupervisedMapperConfig()
+
+        assert config.classification_weight == 0.1
+
+    def test_should_have_default_num_classes(self) -> None:
+        config = SupervisedMapperConfig()
+
+        assert config.num_classes == 4
+
+    def test_should_accept_custom_values(self) -> None:
+        config = SupervisedMapperConfig(classification_weight=0.5, num_classes=10)
+
+        assert config.classification_weight == 0.5
+        assert config.num_classes == 10
+
+
+class TestSupervisedMapperInSynestheticConfig:
+    def test_should_default_supervised_mapper_in_post_init(self) -> None:
+        config = SynestheticConfig(
+            projector=ProjectorConfig(),
+            codebook=CodebookConfig(),
+            training=TrainingConfig(),
+            distance=DistanceConfig(),
+            dataset=DatasetConfig(),
+        )
+
+        assert isinstance(config.supervised_mapper, SupervisedMapperConfig)
+
+    def test_should_load_supervised_mapper_from_yaml(self, tmp_path: Path) -> None:
+        yaml_content = _create_test_yaml_content() + """
+supervised_mapper:
+  classification_weight: 0.5
+  num_classes: 10
+"""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(yaml_content)
+
+        config = SynestheticConfig.from_yaml(str(config_path))
+
+        assert config.supervised_mapper.classification_weight == 0.5
+        assert config.supervised_mapper.num_classes == 10
+
+    def test_should_default_supervised_mapper_when_missing_from_yaml(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "minimal.yaml"
+        config_path.write_text("{}")
+
+        config = SynestheticConfig.from_yaml(str(config_path))
+
+        assert config.supervised_mapper.classification_weight == 0.1
+        assert config.supervised_mapper.num_classes == 4
+
+    def test_should_save_supervised_mapper_to_yaml(self, tmp_path: Path) -> None:
+        config = SynestheticConfig(
+            projector=ProjectorConfig(),
+            codebook=CodebookConfig(),
+            training=TrainingConfig(),
+            distance=DistanceConfig(),
+            dataset=DatasetConfig(),
+            supervised_mapper=SupervisedMapperConfig(classification_weight=0.3, num_classes=8),
+        )
+        config_path = tmp_path / "output.yaml"
+
+        config.to_yaml(str(config_path))
+
+        loaded = SynestheticConfig.from_yaml(str(config_path))
+        assert loaded.supervised_mapper.classification_weight == 0.3
+        assert loaded.supervised_mapper.num_classes == 8

@@ -52,6 +52,12 @@ class StructuredMapperConfig:
 
 
 @dataclass
+class SupervisedMapperConfig:
+    classification_weight: float = 0.1
+    num_classes: int = 4
+
+
+@dataclass
 class SynestheticConfig:
     projector: ProjectorConfig
     codebook: CodebookConfig
@@ -59,15 +65,21 @@ class SynestheticConfig:
     distance: DistanceConfig
     dataset: DatasetConfig
     structured_mapper: Optional[StructuredMapperConfig] = None
+    supervised_mapper: Optional["SupervisedMapperConfig"] = None
 
     def __post_init__(self) -> None:
         if self.structured_mapper is None:
             self.structured_mapper = StructuredMapperConfig()
+        if self.supervised_mapper is None:
+            self.supervised_mapper = SupervisedMapperConfig()
 
     @classmethod
     def from_yaml(cls, path: str) -> "SynestheticConfig":
         with open(path, "r") as f:
             config_dict = yaml.safe_load(f)
+
+        supervised_raw = config_dict.get("supervised_mapper", {})
+        supervised_mapper = SupervisedMapperConfig(**supervised_raw) if supervised_raw else None
 
         return cls(
             projector=ProjectorConfig(**config_dict.get("projector", {})),
@@ -76,6 +88,7 @@ class SynestheticConfig:
             distance=DistanceConfig(**config_dict.get("distance", {})),
             dataset=DatasetConfig(**config_dict.get("dataset", {})),
             structured_mapper=StructuredMapperConfig(**config_dict.get("structured_mapper", {})),
+            supervised_mapper=supervised_mapper,
         )
 
     def to_yaml(self, path: str) -> None:
@@ -86,6 +99,7 @@ class SynestheticConfig:
             "distance": self.distance.__dict__,
             "dataset": self.dataset.__dict__,
             "structured_mapper": self.structured_mapper.__dict__,
+            "supervised_mapper": self.supervised_mapper.__dict__,
         }
 
         Path(path).parent.mkdir(parents=True, exist_ok=True)

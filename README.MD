@@ -16,6 +16,7 @@ The core idea is to map semantic embeddings into perceptual color space (CIE Lab
 
 - **Semantic Color Mapping**: Neural projector maps 384-dim embeddings to 3-dim Lab color space
 - **Structured Color Mapping**: Self-supervised projector variant where hue encodes semantic clusters, lightness encodes sentiment, and chroma encodes concreteness
+- **Supervised Color Mapping**: Joint optimization of color projection and classification using ground-truth labels; classification head discarded after training
 - **Extreme Compression**: 12,288 bits/sentence to 12 bits (4,096-color palette)
 - **Compression Baselines**: Compare color VQ against gzip and Product Quantization at matched bit budgets
 - **Interpretable Structure**: Hue clusters synonyms, lightness encodes sentiment, saturation distinguishes abstract/concrete
@@ -37,8 +38,9 @@ The core idea is to map semantic embeddings into perceptual color space (CIE Lab
 - ✅ **Phase 2**: Evaluation pipeline and baselines
 - ✅ **Phase 3**: Visualizations (codebook palette, histograms, t-SNE projections, confusion matrices)
 - ✅ **Phase 4**: Structured color mapping, compression comparison baselines, query by color palette
+- ✅ **Phase 5**: Supervised color mapping with joint projection + classification training
 
-**Quality Gates**: All passing (flake8, black, bandit, semgrep, xenon, mypy, pip-audit, 100% coverage, 680 tests)
+**Quality Gates**: All passing (flake8, black, bandit, semgrep, xenon, mypy, pip-audit, 100% coverage, 725 tests)
 
 ## Quick Start
 
@@ -68,6 +70,14 @@ The structured mapper uses explicit heads for hue (semantic clusters), lightness
 
 ```bash
 tox -e train -- --config configs/structured.yaml --mapper-type structured
+```
+
+### Train the Supervised Color Mapper
+
+The supervised mapper jointly optimizes color projection and classification using ground-truth labels. The classification head is discarded after training; only the projector weights are saved.
+
+```bash
+tox -e train -- --config configs/supervised.yaml --mapper-type supervised
 ```
 
 ### Query by Color Palette
@@ -120,6 +130,9 @@ tox -e train -- --config configs/base.yaml
 
 # Structured projector (hue=semantics, lightness=sentiment, chroma=concreteness)
 tox -e train -- --config configs/structured.yaml --mapper-type structured
+
+# Supervised projector (joint projection + classification)
+tox -e train -- --config configs/supervised.yaml --mapper-type supervised
 ```
 
 **Arguments**:
@@ -127,9 +140,11 @@ tox -e train -- --config configs/structured.yaml --mapper-type structured
 - `--dataset-path`: Path to training text file (default: `data/train.txt`)
 - `--output-model`: Output path for trained model (default: `artifacts/models/projector.pth`)
 - `--output-codebook`: Output name for color codebook (default: `codebook_4096`)
-- `--mapper-type`: Projector variant to train: `unconstrained` (default) or `structured`
+- `--mapper-type`: Projector variant to train: `unconstrained` (default), `structured`, or `supervised`
 
 The structured mapper trains with a multi-objective loss combining angular hue loss, MSE lightness loss, and MSE chroma loss, weighted by alpha/beta/gamma from the config. Self-supervised targets are derived from the embeddings themselves: k-means clusters for hue, mean activation for lightness, and variance for chroma.
+
+The supervised mapper trains with a combined loss: MSE projection loss + classification_weight * CrossEntropyLoss. It loads labeled data from a dataset adapter (AG News, IMDB, or 20 Newsgroups) rather than a plain text file. The classification head is discarded after training.
 
 ### Encoding
 
@@ -389,6 +404,7 @@ colors_of_meaning/
         pytorch_color_mapper.py
         structured_lab_projector_network.py
         structured_pytorch_color_mapper.py
+        supervised_pytorch_color_mapper.py
         gzip_compression_baseline.py
         pq_compression_baseline.py
         wasserstein_distance_calculator.py
@@ -442,7 +458,7 @@ colors_of_meaning/
 #### Infrastructure
 
 - Implements interfaces from `domain.repository` and `domain.service`
-- `ml/` contains PyTorch color mappers (unconstrained and structured), compression baselines (gzip, Product Quantization), and distance calculators
+- `ml/` contains PyTorch color mappers (unconstrained, structured, and supervised), compression baselines (gzip, Product Quantization), and distance calculators
 - `evaluation/` provides classifier implementations (TF-IDF, HNSW, color histogram)
 - `dataset/` adapts external datasets (AG News, IMDB, 20 Newsgroups)
 - `embedding/` wraps sentence-transformers for text encoding
@@ -459,12 +475,12 @@ colors_of_meaning/
 #### Shared
 
 - `lab_utils.py` provides RGB/Lab conversion and Delta E distance
-- `synesthetic_config.py` loads YAML-based experiment configuration (projector, codebook, training, distance, dataset, structured mapper settings)
+- `synesthetic_config.py` loads YAML-based experiment configuration (projector, codebook, training, distance, dataset, structured mapper, supervised mapper settings)
 - `configuration.py` loads application settings
 
 ## Engineering Practices
 
-- 100% test coverage (680 tests)
+- 100% test coverage (725 tests)
 - Dependency injection using [Lagom](https://github.com/meadsteve/lagom)
 - Structured logging with correlation IDs
 - Consumer-Driven Contract Testing (CDCT)
