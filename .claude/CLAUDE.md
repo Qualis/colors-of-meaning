@@ -1,5 +1,33 @@
 # Python Sprint Zero - Claude Code Instructions
 
+## Project Purpose
+
+This project implements the **Colors of Meaning** experiment ([research article](https://www.qual.is/posts/colors-of-meaning)), exploring machine synesthesia for semantic compression and retrieval. The core idea is mapping 384-dimensional semantic embeddings into 3-dimensional CIE Lab perceptual color space, achieving extreme compression (1000x+) while maintaining interpretable semantic structure. Documents become color distributions (histograms over a quantized palette) rather than high-dimensional vectors.
+
+### Core Domain Concepts
+
+- **Lab Color**: CIE Lab perceptual color (L=lightness 0-100, a=green-red -128 to 127, b=blue-yellow -128 to 127)
+- **Color Codebook**: 4,096-color palette used for vector quantization of Lab colors
+- **Colored Document**: Document represented as a histogram over codebook colors
+- **Semantic Color Mapping**: Neural projector from 384-dim sentence-transformers embeddings to 3-dim Lab space
+- **Structured Mapping**: Self-supervised variant where hue encodes semantic clusters, lightness encodes sentiment, chroma encodes concreteness
+- **Wasserstein Distance**: Earth mover's distance on color histograms for document comparison
+
+### Processing Pipeline
+
+```
+text → sentence-transformers embedding (384-dim) → neural projector → Lab color → codebook quantization → color histogram → Wasserstein distance comparison
+```
+
+### Evaluation Baselines (AG News)
+
+| Method | Accuracy | Macro F1 |
+|--------|----------|----------|
+| TF-IDF | 90.63% | 90.61% |
+| HNSW k-NN | 91.99% | 91.97% |
+
+Supported datasets: AG News (4-class topic), IMDB (binary sentiment), 20 Newsgroups (20-class topic)
+
 ## Absolute Non-Negotiables
 
 These rules are **MANDATORY** and violations will break the project:
