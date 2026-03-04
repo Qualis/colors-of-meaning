@@ -100,11 +100,11 @@
 
 ## Validation
 
-The project includes architectural tests using pytest-archon in `tests/python_sprint_zero/test_architecture.py` that enforce these rules automatically.
+The project includes architectural tests using pytest-archon in `tests/colors_of_meaning/test_architecture.py` that enforce these rules automatically.
 
 Run architectural tests:
 ```bash
-pytest tests/python_sprint_zero/test_architecture.py -v
+pytest tests/colors_of_meaning/test_architecture.py -v
 ```
 
 ## Common Violations to Avoid

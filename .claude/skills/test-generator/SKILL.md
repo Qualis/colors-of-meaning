@@ -113,7 +113,7 @@ def test_should_return_coconut_when_id_exists(self):
 Test Pydantic models and domain entities:
 
 ```python
-from python_sprint_zero.domain.model.coconut import Coconut
+from colors_of_meaning.domain.model.coconut import Coconut
 
 def test_should_create_coconut_with_id(self):
     # Arrange
@@ -138,7 +138,7 @@ def test_should_support_none_id(self):
 Test the interface definition exists and has correct signatures:
 
 ```python
-from python_sprint_zero.domain.repository.coconut_repository import CoconutQueryRepository
+from colors_of_meaning.domain.repository.coconut_repository import CoconutQueryRepository
 
 def test_should_define_read_method(self):
     # Arrange & Act
@@ -153,7 +153,7 @@ def test_should_define_read_method(self):
 Test concrete repository implementations with proper setup:
 
 ```python
-from python_sprint_zero.infrastructure.persistence.in_memory.in_memory_coconut_query_repository import (
+from colors_of_meaning.infrastructure.persistence.in_memory.in_memory_coconut_query_repository import (
     InMemoryCoconutQueryRepository
 )
 
@@ -195,7 +195,7 @@ Test use cases with mocked dependencies:
 
 ```python
 from unittest.mock import Mock
-from python_sprint_zero.application.use_case.coconut_use_case import GetCoconutUseCase
+from colors_of_meaning.application.use_case.coconut_use_case import GetCoconutUseCase
 
 class TestGetCoconutUseCase:
     @pytest.fixture

@@ -10,13 +10,14 @@ These rules are **MANDATORY** and violations will break the project:
 - If code needs explanation, refactor it to be clearer instead
 
 ### 2. ONE ASSERTION PER TEST
-- Each test function MUST contain exactly ONE assertion
-- Do NOT use pytest subtests or multiple assertions
-- Split tests with multiple assertions into separate test functions
-- **MUST use assertpy** (`assert_that`) - never bare Python `assert` statements
+- Each test function SHOULD contain one logical assertion
+- Do NOT use pytest subtests or unrelated multiple assertions
+- Split tests with multiple unrelated assertions into separate test functions
+- For ML/numerical tests, related assertions on the same result (e.g., checking shape and value ranges) are acceptable in a single test
+- Use `assertpy` (`assert_that`) for base entity tests; plain `assert` and `pytest.raises` are acceptable for ML and domain-specific tests
 - **Example:**
   ```python
-  # WRONG - Multiple assertions
+  # WRONG - Multiple unrelated assertions
   def test_user_creation(self):
       user = create_user()
       assert_that(user.name).is_equal_to("John")
@@ -30,6 +31,12 @@ These rules are **MANDATORY** and violations will break the project:
   def test_should_set_user_email_when_user_is_created(self):
       user = create_user()
       assert_that(user.email).is_equal_to("john@example.com")
+
+  # ALSO CORRECT - Related assertions on same ML result
+  def test_should_produce_valid_lab_output(self):
+      output = network.forward(input_tensor)
+      assert output.shape == (2, 3)
+      assert torch.all(output[:, 0] >= 0) and torch.all(output[:, 0] <= 100)
   ```
 
 ### 3. LAYER BOUNDARY VIOLATIONS FORBIDDEN
@@ -54,42 +61,76 @@ These rules are **MANDATORY** and violations will break the project:
 ### Project Structure Overview
 
 ```
-project/
+colors_of_meaning/
 
  application/                       # Use cases
     use_case/
+        train_color_mapping_use_case.py
+        encode_document_use_case.py
+        compare_documents_use_case.py
+        compress_document_use_case.py
+        compression_comparison_use_case.py
+        query_by_palette_use_case.py
+        evaluate_use_case.py
+        visualize_codebook_use_case.py
+        visualize_documents_use_case.py
         coconut_use_case.py
     service/
-        example_service.py
 
  domain/                            # Business logic
     authentication/
-        authentitator.py
+        authenticator.py
     health/
         health_status.py
     model/
+        lab_color.py
+        color_codebook.py
+        colored_document.py
+        evaluation_sample.py
+        evaluation_result.py
         coconut.py
     repository/
+        color_codebook_repository.py
+        dataset_repository.py
         coconut_repository.py
     service/
-        example_data_import_service.py
+        color_mapper.py
+        compression_baseline.py
+        distance_calculator.py
+        classifier.py
+        retriever.py
+        metrics_calculator.py
+        figure_renderer.py
 
  infrastructure/                    # Adapters, drivers
+    dataset/
+        ag_news_dataset_adapter.py
+        imdb_dataset_adapter.py
+        newsgroups_dataset_adapter.py
+    embedding/
+        sentence_embedding_adapter.py
+    evaluation/
+        color_histogram_classifier.py
+        hnsw_classifier.py
+        tfidf_classifier.py
+        sklearn_metrics_calculator.py
+    ml/
+        pytorch_color_mapper.py
+        structured_lab_projector_network.py
+        structured_pytorch_color_mapper.py
+        gzip_compression_baseline.py
+        pq_compression_baseline.py
+        wasserstein_distance_calculator.py
+        jensen_shannon_distance_calculator.py
     observability/
         logger.py
         metrics.py
         tracing.py
     persistence/
-        in_memory_coconut_command_repository.py
-        in_memory_coconut_query_repository.py
-    cache/
-        cache_provider.py
-    message/
-        message_producer.py
-        message_consumer.py
-    importer/
-        example_importer.py
-        base_importer.py
+        file_color_codebook_repository.py
+        in_memory/
+    visualization/
+        matplotlib_figure_renderer.py
     security/
         basic_authentication.py
     system/
@@ -99,19 +140,25 @@ project/
     api/
         main.py
         controller/
-            coconut_controller.py
             health_controller.py
+            coconut_controller.py
+            query_controller.py
         data_transfer_object/
             coconut_data_transfer_object.py
-            health_status_data_transfer_object.py
+            palette_query_dto.py
+    cli/
+        train.py
+        encode.py
+        compare.py
+        compress.py
+        eval.py
+        visualize.py
+        query.py
 
  shared/                            # Cross-cutting concerns
     configuration.py
-    resilience/
-        retry.py
-        circuit_breaker.py
-    formatter/
-        example_formatter.py
+    lab_utils.py
+    synesthetic_config.py
 ```
 
 ### Domain Layer (`domain/`)
@@ -126,10 +173,11 @@ project/
 - MUST NOT have side effects (no I/O, no external calls)
 
 **Structure:**
-- `model/` - Domain entities (e.g., `coconut.py`)
+- `model/` - Domain entities (e.g., `LabColor`, `ColorCodebook`, `ColoredDocument`, `EvaluationResult`, `Coconut`)
 - `repository/` - Repository interfaces (abstract base classes)
-- `service/` - Domain logic services
+- `service/` - Domain service interfaces (e.g., `ColorMapper`, `DistanceCalculator`, `Classifier`, `Retriever`, `MetricsCalculator`, `FigureRenderer`, `CompressionBaseline`)
 - `authentication/` - Authentication domain logic
+- `health/` - Health status domain model
 
 ### Application Layer (`application/`)
 
@@ -143,7 +191,7 @@ project/
 - Handle application-level concerns (transaction boundaries, etc.)
 
 **Structure:**
-- `use_case/` - Use case implementations (e.g., `coconut_use_case.py`)
+- `use_case/` - Use case implementations (e.g., `TrainColorMappingUseCase`, `EncodeDocumentUseCase`, `EvaluateUseCase`, `QueryByPaletteUseCase`, `CoconutUseCase`)
 - `service/` - Application-level services
 
 ### Infrastructure Layer (`infrastructure/`)
@@ -151,19 +199,21 @@ project/
 **Purpose:** Implement technical adapters and integrations
 
 **Rules:**
-- Implement repository interfaces from `domain.repository`
-- Handle all external integrations (databases, APIs, message queues)
+- Implement repository interfaces from `domain.repository` and service interfaces from `domain.service`
+- Handle all external integrations (datasets, ML frameworks, APIs)
 - Provide concrete implementations of domain abstractions
 - Include observability implementations (logging, metrics, tracing)
 - Manage security implementations (authentication, authorization)
 
 **Structure:**
-- `persistence/` - Repository implementations (in-memory, database, etc.)
+- `ml/` - PyTorch color mappers (unconstrained and structured), compression baselines (gzip, Product Quantization), and distance calculators (Wasserstein, Jensen-Shannon)
+- `dataset/` - Dataset adapters (AG News, IMDB, 20 Newsgroups)
+- `embedding/` - Sentence-transformers embedding adapter
+- `evaluation/` - Classifier implementations (TF-IDF, HNSW, color histogram) and metrics calculator
+- `visualization/` - Matplotlib figure renderer for codebook palettes, histograms, projections, confusion matrices
+- `persistence/` - Repository implementations (file-based codebook, in-memory)
 - `observability/` - Logging, metrics, tracing
 - `security/` - Authentication and authorization implementations
-- `cache/` - Caching providers (Redis, etc.)
-- `message/` - Message queue producers/consumers
-- `importer/` - Data import implementations
 - `system/` - Health checks and diagnostics
 
 ### Interface Layer (`interface/`)
@@ -180,8 +230,9 @@ project/
 
 **Structure:**
 - `api/main.py` - FastAPI application setup
-- `api/controller/` - API route controllers
-- `api/data_transfer_object/` - Pydantic DTOs
+- `api/controller/` - API route controllers (health, coconut, query by palette)
+- `api/data_transfer_object/` - Pydantic DTOs (coconut, palette query)
+- `cli/` - Command-line tools (train, encode, compare, compress, eval, visualize, query)
 
 **Example Controller Pattern:**
 ```python
@@ -212,13 +263,12 @@ async def get_coconut(
 **Rules:**
 - Contains reusable utilities accessible from all layers
 - Includes configuration management
-- Provides resilience patterns (retry, circuit breaker)
-- Contains formatters and common utilities
+- Provides color space utilities and experiment configuration
 
 **Structure:**
-- `configuration.py` - Settings and config loading
-- `resilience/` - Retry and circuit breaker patterns
-- `formatter/` - Reusable formatting utilities
+- `configuration.py` - Application settings and config loading
+- `lab_utils.py` - RGB/Lab conversion and Delta E distance utilities
+- `synesthetic_config.py` - YAML-based experiment configuration (projector, codebook, training, distance, dataset, structured mapper settings)
 
 ## Testing Requirements
 
@@ -237,7 +287,7 @@ test_should_[expected_behavior]_when_[condition]
 
 ### Test Structure
 
-All tests MUST use `assertpy` library (`assert_that`) - never bare `assert` statements.
+Base entity tests use `assertpy` (`assert_that`). ML and domain-specific tests may use plain `assert` and `pytest.raises`.
 
 ```python
 from assertpy import assert_that
@@ -253,6 +303,16 @@ def test_should_return_coconut_when_id_exists(self):
 
     # Assert
     assert_that(result.id).is_equal_to(coconut_id)
+```
+
+```python
+def test_should_embed_to_lab(self):
+    mapper = PyTorchColorMapper(input_dim=10, device="cpu")
+    embedding = np.array([1.0] * 10, dtype=np.float32)
+
+    result = mapper.embed_to_lab(embedding)
+
+    assert isinstance(result, LabColor)
 ```
 
 ### Consumer Driven Contract Testing (CDCT)
@@ -293,9 +353,9 @@ def test_should_define_repository_interfaces_in_domain(self):
 
 - Use mocks/stubs to isolate behavior under test
 - Prefer dependency injection for testability
-- Mock external services, databases, and I/O
+- Mock external services, datasets, and I/O (no network calls in unit tests)
 - Keep tests fast and independent
-- **ALWAYS use `assert_that` from assertpy** - bare `assert` statements are forbidden
+- Use `assertpy` (`assert_that`) for base entity tests; plain `assert` and `pytest.raises` are acceptable for ML/domain-specific tests
 
 ## Dependency Injection with Lagom
 
@@ -515,30 +575,30 @@ tox -e format
 - Create files without necessity
 - Add comments to explain unclear code (refactor instead)
 - Violate layer boundaries "just this once"
-- Write tests with multiple assertions
+- Write tests with multiple unrelated assertions
 - Skip running `tox` before completion
 
 ## Common Pitfalls to Avoid
 
 1. **Importing infrastructure in domain** - Domain must be pure
-2. **Multiple assertions in one test** - Split into separate tests
-3. **Using bare assert statements** - ALWAYS use `assert_that` from assertpy
-4. **Returning plain dicts from endpoints** - MUST use Pydantic DTOs
-5. **Adding comments** - Make code self-documenting instead
-6. **Direct instantiation** - Use dependency injection
-7. **Missing `__init__.py`** - Add to all packages
-8. **Wrong test names** - Follow sentence pattern
-9. **Skipping CDCT tests** - Required for service interactions
-10. **Missing observability** - Add logging with correlation-id
-11. **Using pytest instead of tox for final verification** - Bypasses 8 quality gates (flake8, black, bandit, semgrep, mypy, xenon, radon, pip-audit)
-12. **Creating new files unnecessarily** - Prefer editing existing
+2. **Multiple unrelated assertions in one test** - Split into separate tests (related assertions on same ML result are acceptable)
+3. **Returning plain dicts from endpoints** - MUST use Pydantic DTOs
+4. **Adding comments** - Make code self-documenting instead
+5. **Direct instantiation** - Use dependency injection
+6. **Missing `__init__.py`** - Add to all packages
+7. **Wrong test names** - Follow sentence pattern
+8. **Skipping CDCT tests** - Required for service interactions
+9. **Missing observability** - Add logging with correlation-id
+10. **Using pytest instead of tox for final verification** - Bypasses 8 quality gates (flake8, black, bandit, semgrep, mypy, xenon, radon, pip-audit)
+11. **Creating new files unnecessarily** - Prefer editing existing
+12. **Network calls in unit tests** - Use synthetic data and mocks instead
 
 ## Success Criteria
 
 Work is complete when:
 - [ ] All tests pass with 100% coverage (`tox`)
 - [ ] All static analysis passes (flake8, black, bandit, xenon, mypy, semgrep, pip-audit)
-- [ ] Each test has exactly one assertion
+- [ ] Each test has one logical assertion (related assertions on same result are acceptable)
 - [ ] Test names follow sentence pattern
 - [ ] No comments exist in code
 - [ ] Layer boundaries are respected

@@ -4,7 +4,7 @@ This document contains actual test examples from the project demonstrating prope
 
 ## Use Case Test Example
 
-From `tests/python_sprint_zero/application/use_case/test_coconut_use_case.py`:
+From `tests/colors_of_meaning/application/use_case/test_coconut_use_case.py`:
 
 ```python
 class TestGetCoconutUseCase:
@@ -49,7 +49,7 @@ class TestGetCoconutUseCase:
 
 ## Controller Test Example
 
-From `tests/python_sprint_zero/interface/api/controller/test_coconut_controller.py`:
+From `tests/colors_of_meaning/interface/api/controller/test_coconut_controller.py`:
 
 ```python
 class TestCoconutController:
@@ -102,7 +102,7 @@ class TestCoconutController:
 
 ## DTO Test Example
 
-From `tests/python_sprint_zero/interface/api/data_transfer_object/data_transfer_object/test_coconut_data_transfer_object.py`:
+From `tests/colors_of_meaning/interface/api/data_transfer_object/data_transfer_object/test_coconut_data_transfer_object.py`:
 
 ```python
 class TestCoconutDataTransferObject:
@@ -138,7 +138,7 @@ class TestCoconutDataTransferObject:
 
 ## Repository Implementation Test
 
-From `tests/python_sprint_zero/infrastructure/persistence/in_memory/test_in_memory_coconut_query_repository.py`:
+From `tests/colors_of_meaning/infrastructure/persistence/in_memory/test_in_memory_coconut_query_repository.py`:
 
 ```python
 class TestInMemoryCoconutQueryRepository:
@@ -211,7 +211,7 @@ def test_should_pass_coconut_with_correct_id_to_repository(self, use_case, mock_
 
 ## Common Fixtures
 
-From `tests/python_sprint_zero/conftest.py`:
+From `tests/colors_of_meaning/conftest.py`:
 
 ```python
 @pytest.fixture

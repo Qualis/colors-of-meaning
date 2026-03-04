@@ -17,7 +17,7 @@ This document provides concrete examples from the Python Sprint Zero codebase de
 
 ### Example: Use Case Methods
 
-**Location:** `src/python_sprint_zero/application/use_case/coconut_use_case.py:8-13`
+**Location:** `src/colors_of_meaning/application/use_case/coconut_use_case.py:8-13`
 
 ```python
 class GetCoconutUseCase:
@@ -41,7 +41,7 @@ No need for comments like "Get coconut from repository" or "Execute use case log
 
 ### Example: Authentication Methods
 
-**Location:** `src/python_sprint_zero/infrastructure/security/basic_authentication.py:19-25`
+**Location:** `src/colors_of_meaning/infrastructure/security/basic_authentication.py:19-25`
 
 ```python
 def verify_credentials(self, username: str, password: str) -> bool:
@@ -63,7 +63,7 @@ def verify_credentials(self, username: str, password: str) -> bool:
 
 ### Example: Controller Route Registration
 
-**Location:** `src/python_sprint_zero/interface/api/controller/coconut_controller.py:29-47`
+**Location:** `src/colors_of_meaning/interface/api/controller/coconut_controller.py:29-47`
 
 ```python
 def _register_routes(self) -> None:
@@ -89,7 +89,7 @@ def _register_routes(self) -> None:
 
 ### Example: Authentication Setup
 
-**Location:** `src/python_sprint_zero/infrastructure/security/basic_authentication.py:55-64`
+**Location:** `src/colors_of_meaning/infrastructure/security/basic_authentication.py:55-64`
 
 ```python
 def get_basic_authenticator() -> BasicAuthenticator:
@@ -114,7 +114,7 @@ def get_basic_authenticator() -> BasicAuthenticator:
 
 ### Example: Response Creation
 
-**Location:** `src/python_sprint_zero/interface/api/controller/coconut_controller.py:66-69`
+**Location:** `src/colors_of_meaning/interface/api/controller/coconut_controller.py:66-69`
 
 ```python
 created_id = self.create_coconut_use_case.execute(data_transfer_object.id)
@@ -134,7 +134,7 @@ response.headers["Location"] = f"/coconut/{created_id}"
 
 ### Example: Repository Validation
 
-**Location:** `src/python_sprint_zero/infrastructure/persistence/in_memory/in_memory_coconut_query_repository.py:12-20`
+**Location:** `src/colors_of_meaning/infrastructure/persistence/in_memory/in_memory_coconut_query_repository.py:12-20`
 
 ```python
 def read(self, id: uuid.UUID) -> Coconut:
@@ -159,7 +159,7 @@ def read(self, id: uuid.UUID) -> Coconut:
 
 ### Example: Authentication Errors
 
-**Location:** `src/python_sprint_zero/infrastructure/security/basic_authentication.py:35-40`
+**Location:** `src/colors_of_meaning/infrastructure/security/basic_authentication.py:35-40`
 
 ```python
 if not credentials:
@@ -181,7 +181,7 @@ if not credentials:
 
 ### Example: CQRS Separation
 
-**Location:** `src/python_sprint_zero/application/use_case/coconut_use_case.py`
+**Location:** `src/colors_of_meaning/application/use_case/coconut_use_case.py`
 
 ```python
 class GetCoconutUseCase:
@@ -214,7 +214,7 @@ class CreateCoconutUseCase:
 
 ### Example: Factory Function
 
-**Location:** `src/python_sprint_zero/interface/api/controller/coconut_controller.py:84-94`
+**Location:** `src/colors_of_meaning/interface/api/controller/coconut_controller.py:84-94`
 
 ```python
 def create_coconut_controller(
@@ -243,7 +243,7 @@ def create_coconut_controller(
 
 ### Example: Credential Verification
 
-**Location:** `src/python_sprint_zero/infrastructure/security/basic_authentication.py:32-47`
+**Location:** `src/colors_of_meaning/infrastructure/security/basic_authentication.py:32-47`
 
 ```python
 def require_authentication(
@@ -274,7 +274,7 @@ def require_authentication(
 
 ### Example: Null Checking
 
-**Location:** `src/python_sprint_zero/infrastructure/persistence/in_memory/in_memory_coconut_query_repository.py:23-27`
+**Location:** `src/colors_of_meaning/infrastructure/persistence/in_memory/in_memory_coconut_query_repository.py:23-27`
 
 ```python
 def add_to_storage(self, coconut: Coconut) -> None:
@@ -485,7 +485,7 @@ def __init__(self, query_repository: CoconutQueryRepository) -> None:
 
 ### Pattern: Data Transfer Object (DTO) Conversion
 
-**Location:** `src/python_sprint_zero/interface/api/data_transfer_object/`
+**Location:** `src/colors_of_meaning/interface/api/data_transfer_object/`
 
 ```python
 @classmethod
@@ -605,9 +605,9 @@ When you're tempted to add a comment, refer back to these patterns and refactor 
 ## References
 
 All examples taken from:
-- `src/python_sprint_zero/application/use_case/coconut_use_case.py`
-- `src/python_sprint_zero/interface/api/controller/coconut_controller.py`
-- `src/python_sprint_zero/infrastructure/persistence/in_memory/in_memory_coconut_query_repository.py`
-- `src/python_sprint_zero/infrastructure/security/basic_authentication.py`
+- `src/colors_of_meaning/application/use_case/coconut_use_case.py`
+- `src/colors_of_meaning/interface/api/controller/coconut_controller.py`
+- `src/colors_of_meaning/infrastructure/persistence/in_memory/in_memory_coconut_query_repository.py`
+- `src/colors_of_meaning/infrastructure/security/basic_authentication.py`
 
 See `.claude/CLAUDE.md` for full project rules and architectural guidelines.
