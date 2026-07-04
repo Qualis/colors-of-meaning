@@ -24,8 +24,9 @@ dataset:
   name: ag_news
   train_split: train
   test_split: test
-  max_samples: 4000
+  max_samples: 30000
+  paragraphs_per_work: 300
 
 supervised_mapper:
   classification_weight: 0.1
-  num_classes: 12
+  num_classes: 22

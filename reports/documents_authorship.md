@@ -9,26 +9,34 @@ reports); regenerate it locally with the commands at the end.
 
 ## Corpus
 
-`documents/<author>/<work>.txt` — 12 Project Gutenberg authors, 73 works:
+`documents/<author>/<work>.txt` — 22 Project Gutenberg authors, 133 works:
 
 | author | works | author | works |
 |---|---|---|---|
-| austen | 6 | melville | 6 |
-| conrad | 6 | smith | 3 |
-| darwin | 6 | stevenson | 6 |
-| dickens | 7 | twain | 7 |
-| doyle | 7 | wells | 7 |
-| eliot | 6 | hardy | 6 |
+| austen | 6 | kipling | 6 |
+| carroll | 6 | melville | 6 |
+| conrad | 6 | shelley | 6 |
+| darwin | 6 | smith | 3 |
+| dickens | 7 | stevenson | 6 |
+| dostoevsky | 6 | stoker | 6 |
+| doyle | 7 | thoreau | 6 |
+| eliot | 6 | tolstoy | 6 |
+| hardy | 6 | twain | 7 |
+| hawthorne | 6 | verne | 6 |
+| wells | 7 | wilde | 6 |
 
 The author is the class label. Works are stripped of Gutenberg boilerplate, split into
 paragraphs, globally de-duplicated, and partitioned by a **work-level three-way holdout**
-(whole works held out per split, so no test-work paragraph is ever seen in training):
+(whole works held out per split, so no test-work paragraph is ever seen in training). The
+number of paragraphs kept per work is the `paragraphs_per_work` cap; it is now a
+`configs/documents.yaml` value (`dataset.paragraphs_per_work`, default **300**, overridable
+with `--paragraphs-per-work`). At the cap-300 default the training corpus is:
 
 | split | paragraphs |
 |---|---|
-| train | 2,939 |
-| validation | 713 |
-| test | 720 |
+| train | 25,452 |
+| validation | 6,096 |
+| test | 6,568 |
 
 The split is deterministic and leakage-free (train ∩ validation ∩ test = ∅, verified).
 
@@ -36,27 +44,29 @@ The split is deterministic and leakage-free (train ∩ validation ∩ test = ∅
 
 A **supervised author-contrastive projector** (384-dim sentence embedding → 3-dim CIE Lab)
 is trained on the train split: same-author paragraphs are pulled together in Lab space and
-different authors pushed apart, with an auxiliary 12-way classification head. The epoch
+different authors pushed apart, with an auxiliary 22-way classification head. The epoch
 checkpoint is **selected on the validation split** by colour-histogram authorship accuracy
 (the same metric reported on test) — not by structure preservation, which is
 counterproductive here because the contrastive objective deliberately reorganises colour by
-author. The selected checkpoint scored **0.227 on validation**.
+author. The selected checkpoint scored **0.167 on validation**.
 
 ## Held-out test results
 
-12-way authorship on the held-out test works (chance = 1/12 = 0.083):
+22-way authorship on the held-out test works (chance = 1/22 = 0.045). To keep the
+colour-histogram k-NN tractable, accuracy is measured on the standard cap-60 held-out
+corpus (5,340-paragraph reference / 1,320-paragraph test):
 
 | method | bits/token | test accuracy | macro-F1 |
 |---|---|---|---|
-| **colour — validation-selected projector** | 12 | **0.207** | 0.210 |
-| colour — structure-selected projector | 12 | 0.190 | 0.192 |
-| TF-IDF (full lexical features) | — | 0.425 | 0.395 |
-| chance | — | 0.083 | — |
+| **colour — validation-selected projector** | 12 | **0.108** | 0.106 |
+| TF-IDF (full lexical features) | — | 0.372 | 0.347 |
+| chance | — | 0.045 | — |
 
-A real authorship signal — **~2.5× chance** — survives compressing each paragraph's meaning
-into a 12-bit colour. Full-lexical TF-IDF is ~2× better, which is the honest cost of the
-compression: colour keeps semantic *shape*, TF-IDF keeps every word. Validation-based
-checkpoint selection lifts the colour method from 0.190 to 0.207.
+A real authorship signal — **~2.4× chance** — survives compressing each paragraph's meaning
+into a 12-bit colour, now across a harder 22-author field. Full-lexical TF-IDF is ~3.4×
+better, which is the honest cost of the compression: colour keeps semantic *shape*, TF-IDF
+keeps every word. See [Data scaling](#data-scaling-does-more-training-data-help) for the
+multi-seed evidence that this colour signal grows with training data.
 
 ## The texts as colours
 
@@ -71,13 +81,11 @@ Per-author colour signatures (the dominant palette colours for each author):
 
 ### A4 colour image per book
 
-Each of the 73 works rendered as an A4 colours-of-meaning sheet — horizontal bands of the
+Each work can be rendered as an A4 colours-of-meaning sheet — horizontal bands of the
 book's palette colours, sized by how often the trained projector maps the book's sentences
 to each colour (the `signature` layout, computed over up to 300 paragraphs per book). The
 full-resolution A4 sheets are in [`figures/a4/`](figures/a4/) (one `<author>__<work>.png`
-per book); the contact sheet below shows all 73:
-
-![Per-book A4 colour signatures](figures/documents_a4_gallery.png)
+per book).
 
 Darwin's scientific prose (`coral_reefs`, `origin_of_species`, `the_descent_of_man`,
 `voyage_of_the_beagle`) renders a distinctive bright cyan, visibly separated from the dark
@@ -88,18 +96,9 @@ register even before authorship.
 
 The signatures above are a *lossy, semantic* rendering. Separately, the lossless codec
 (`encode_lossless` / `decode_lossless`) stores each book's **exact text** as printable A4
-colour-barcode page(s) that decode back **byte-for-byte**. Encoding every work and decoding
-it again:
-
-- **73 books → 79 A4 pages; 0 / 73 round-trip failures** — every book decodes to its exact
-  source bytes.
-- At 300 DPI most books fit on a single A4 page (the text is gzip-compressed before packing
-  into the colour cells); only the six longest need two pages (`smith/wealth_of_nations`
-  — 2.4 MB of text — `eliot/middlemarch`, `eliot/daniel_deronda`, `dickens/bleak_house`,
-  `dickens/david_copperfield`, `darwin/the_descent_of_man`).
-
-These barcode images are dense data (~37 MB for all 73) and are **not committed** — they are
-git-ignored, regenerable local artifacts. Regenerate and verify one with:
+colour-barcode page(s) that decode back **byte-for-byte**. These barcode images are dense
+data and are **not committed** — they are git-ignored, regenerable local artifacts.
+Regenerate and verify one with:
 
 ```bash
 tox -e encode_lossless -- --input-path documents/austen/pride_and_prejudice.txt \
@@ -107,38 +106,38 @@ tox -e encode_lossless -- --input-path documents/austen/pride_and_prejudice.txt 
 tox -e decode_lossless -- --input-paths reports/figures/lossless/austen__pride_and_prejudice.png
 ```
 
-## Rate–distortion frontier (documents)
+## Data scaling: does more training data help?
 
-Sweeping the colour palette resolution (3/6/9/12 bits) against gzip and Product
-Quantization at matched budgets, with the colour method's downstream authorship accuracy:
+The `paragraphs_per_work` cap controls how much of each book enters training. Raising it
+un-throttles the same books (each book holds hundreds of qualifying paragraphs). Training
+the val-selected supervised projector at increasing caps and measuring held-out authorship
+accuracy on the **same** fixed cap-60 test set (8 seeds each; mean ± population std):
 
-![Documents rate-distortion frontier](figures/documents_rate_distortion.png)
+| `paragraphs_per_work` | train paragraphs | test accuracy (mean ± std) | × chance |
+|---|---|---|---|
+| 60 | 5,340 | 0.092 ± 0.016 | 2.02× |
+| 150 | 13,339 | 0.128 ± 0.022 | 2.80× |
+| 300 | 25,452 | 0.149 ± 0.023 | 3.28× |
 
-Colour-VQ distortion (ΔE) falls from ~154 at 3 bits to ~6.9 at 12 bits; see
-[`documents_rate_distortion.md`](documents_rate_distortion.md) for the full table. (The
-per-budget accuracy there is a bounded, sub-sampled estimate; the headline 0.207 above is
-the full-test-split number.)
+Accuracy rises monotonically with training data, and the cap-60 → cap-300 gap (+0.057) is
+~2.4× the per-point standard deviation — so the effect is robust across seeds, not a
+single-run artifact. Un-throttling the *same* books (raising the cap) is the lever; no new
+text was needed. (8 seeds each; population std; the held-out cap-60 test set is held fixed
+across all runs, so only the training-data volume varies.)
 
 ## Reproduce (local; requires `./documents/`)
 
 ```bash
-# train the author-contrastive projector, selecting the checkpoint on validation
+# train the author-contrastive projector at the config-default cap (paragraphs_per_work: 300),
+# selecting the checkpoint on validation
 tox -e train -- --source documents --mapper-type supervised --config configs/documents.yaml \
   --select-on validation \
   --output-model artifacts/models/projector_documents_valsel.pth --output-codebook codebook_documents_valsel
 
-# held-out test accuracy (colour method) and the TF-IDF baseline
+# held-out test accuracy (colour method) and the TF-IDF baseline, on the cap-60 held-out corpus
 tox -e eval -- --source documents --method color --mapper-type supervised --config configs/documents.yaml \
+  --paragraphs-per-work 60 \
   --model-path artifacts/models/projector_documents_valsel.pth --codebook-path codebook_documents_valsel \
   --distance jensen_shannon
-tox -e eval -- --source documents --method tfidf --config configs/documents.yaml
-
-# figures: texts-as-colours and the rate-distortion frontier
-tox -e visualize_corpus -- --corpus-specs "austen=documents/austen/pride_and_prejudice.txt,...,wells=documents/wells/the_war_of_the_worlds.txt" \
-  --config configs/documents.yaml --model-path artifacts/models/projector_documents_valsel.pth \
-  --codebook-name codebook_documents_valsel --output-dir reports/figures
-tox -e rate_distortion -- --source documents --mapper-type supervised --config configs/documents.yaml \
-  --model-path artifacts/models/projector_documents_valsel.pth --budgets 2 4 8 16 --methods color_vq gzip pq \
-  --with-accuracy --distance jensen_shannon --output-path reports/documents_rate_distortion.md \
-  --figure-path reports/figures/documents_rate_distortion.png
+tox -e eval -- --source documents --method tfidf --config configs/documents.yaml --paragraphs-per-work 60
 ```

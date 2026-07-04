@@ -74,7 +74,7 @@ class TrainArgs:
     source: Literal["dataset", "documents"] = "dataset"
     documents_dir: str = "./documents"
     min_paragraph_chars: int = 200
-    paragraphs_per_work: int = 60
+    paragraphs_per_work: Optional[int] = None
     split_strategy: Literal["work", "paragraph"] = "work"
     validation_fraction: float = 0.2
     test_fraction: float = 0.2
@@ -172,11 +172,17 @@ def _validate_sentiment_source(args: TrainArgs, config: SynestheticConfig) -> No
         raise ValueError(f"Unknown sentiment_source: {source}. Supported: {sorted(SUPPORTED_SENTIMENT_SOURCES)}")
 
 
-def _build_document_corpus(args: TrainArgs) -> DocumentCorpusDatasetAdapter:
+def _resolve_paragraphs_per_work(args: TrainArgs, config: SynestheticConfig) -> int:
+    if args.paragraphs_per_work is not None:
+        return args.paragraphs_per_work
+    return config.dataset.paragraphs_per_work
+
+
+def _build_document_corpus(args: TrainArgs, config: SynestheticConfig) -> DocumentCorpusDatasetAdapter:
     return DocumentCorpusDatasetAdapter(
         documents_dir=args.documents_dir,
         min_paragraph_chars=args.min_paragraph_chars,
-        paragraphs_per_work=args.paragraphs_per_work,
+        paragraphs_per_work=_resolve_paragraphs_per_work(args, config),
         split_strategy=args.split_strategy,
         validation_fraction=args.validation_fraction,
         test_fraction=args.test_fraction,
@@ -185,7 +191,7 @@ def _build_document_corpus(args: TrainArgs) -> DocumentCorpusDatasetAdapter:
 
 def _load_documents_data(args: TrainArgs, config: SynestheticConfig) -> tuple:
     print(f"Loading document corpus train split from {args.documents_dir}...")
-    samples = _build_document_corpus(args).get_samples(
+    samples = _build_document_corpus(args, config).get_samples(
         split=config.dataset.train_split, max_samples=config.dataset.max_samples, seed=config.training.seed
     )
     texts = [sample.text for sample in samples]
@@ -277,7 +283,7 @@ def _build_validation_selector(
     train_labels: npt.NDArray,
 ) -> ValidationAccuracyCheckpointSelector:
     print("Encoding validation split for checkpoint selection...")
-    samples = _build_document_corpus(args).get_samples(
+    samples = _build_document_corpus(args, config).get_samples(
         split="validation", max_samples=args.selection_validation_samples, seed=config.training.seed
     )
     validation_embeddings = SentenceEmbeddingAdapter().encode_batch(

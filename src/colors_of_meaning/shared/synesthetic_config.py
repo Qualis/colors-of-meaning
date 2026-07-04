@@ -41,6 +41,7 @@ class DatasetConfig:
     train_split: str = "train"
     test_split: str = "test"
     max_samples: Optional[int] = None
+    paragraphs_per_work: int = 60
 
 
 @dataclass

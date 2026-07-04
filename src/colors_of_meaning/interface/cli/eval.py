@@ -72,7 +72,7 @@ class EvalArgs:
     source: Literal["dataset", "documents"] = "dataset"
     documents_dir: str = "./documents"
     min_paragraph_chars: int = 200
-    paragraphs_per_work: int = 60
+    paragraphs_per_work: Optional[int] = None
     split_strategy: Literal["work", "paragraph"] = "work"
     validation_fraction: float = 0.2
     test_fraction: float = 0.2
@@ -89,18 +89,24 @@ def _setup_dataset(dataset_name: str) -> DatasetRepository:
     return adapter_class()
 
 
-def _build_dataset_repository(args: EvalArgs) -> DatasetRepository:
+def _build_dataset_repository(args: EvalArgs, config: SynestheticConfig) -> DatasetRepository:
     if args.source == "documents":
-        return _build_document_corpus(args)
+        return _build_document_corpus(args, config)
     return _setup_dataset(args.dataset)
 
 
-def _build_document_corpus(args: EvalArgs) -> DatasetRepository:
+def _resolve_paragraphs_per_work(args: EvalArgs, config: SynestheticConfig) -> int:
+    if args.paragraphs_per_work is not None:
+        return args.paragraphs_per_work
+    return config.dataset.paragraphs_per_work
+
+
+def _build_document_corpus(args: EvalArgs, config: SynestheticConfig) -> DatasetRepository:
     print(f"Loading document corpus from {args.documents_dir}...")
     return DocumentCorpusDatasetAdapter(
         documents_dir=args.documents_dir,
         min_paragraph_chars=args.min_paragraph_chars,
-        paragraphs_per_work=args.paragraphs_per_work,
+        paragraphs_per_work=_resolve_paragraphs_per_work(args, config),
         split_strategy=args.split_strategy,
         validation_fraction=args.validation_fraction,
         test_fraction=args.test_fraction,
@@ -179,7 +185,7 @@ def _resolve_max_samples(args: EvalArgs, config: SynestheticConfig) -> Optional[
 
 def main(args: EvalArgs) -> None:
     config = SynestheticConfig.from_yaml(args.config)
-    dataset_repo = _build_dataset_repository(args)
+    dataset_repo = _build_dataset_repository(args, config)
     classifier, bits_per_token = _create_classifier(args, config)
     evaluate_use_case = EvaluateUseCase(classifier, SklearnMetricsCalculator(), dataset_repo)
     max_samples = _resolve_max_samples(args, config)

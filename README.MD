@@ -17,10 +17,10 @@ even losslessly store meaning.** What this repository demonstrates, end to end:
   colour method retrieves at **81.8%** accuracy at the 4,000-document scale (TF-IDF/HNSW
   baselines ~90–92%); the cost of compression is quantified on a measured **rate–distortion
   frontier** against gzip and Product Quantization.
-- **Real prose, not just benchmarks.** A 12-author / 73-work Project Gutenberg corpus is a
+- **Real prose, not just benchmarks.** A 22-author / 133-work Project Gutenberg corpus is a
   first-class dataset source (author = label, leakage-free work-level train/validation/test
-  split). A colour projector trained and *validation-selected* on it reaches **20.7%**
-  held-out 12-way authorship accuracy — **~2.5× the 8.3% chance** — vs 42.5% for full-lexical
+  split). A colour projector trained and *validation-selected* on it reaches **10.8%**
+  held-out 22-way authorship accuracy — **~2.4× the 4.5% chance** — vs 37.2% for full-lexical
   TF-IDF. The gap is the honest price of squeezing meaning into 12 bits.
 - **Documents you can see.** Each text renders *as colour*: a t-SNE where authors form colour
   neighbourhoods, per-author signatures, and an **A4 colours-of-meaning sheet per book**

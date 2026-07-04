@@ -261,6 +261,7 @@ def _assert_dataset_defaults(config: DatasetConfig) -> None:
 def _assert_dataset_other_defaults(config: DatasetConfig) -> None:
     assert config.test_split == "test"
     assert config.max_samples is None
+    assert config.paragraphs_per_work == 60
 
 
 class TestProjectorConfig:

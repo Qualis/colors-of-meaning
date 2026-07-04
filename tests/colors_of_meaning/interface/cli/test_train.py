@@ -16,6 +16,7 @@ from colors_of_meaning.interface.cli.train import (
     _load_training_data,
     _load_documents_data,
     _build_document_corpus,
+    _resolve_paragraphs_per_work,
     _maybe_build_validation_selector,
     _build_validation_selector,
     _print_selection_score,
@@ -39,7 +40,7 @@ from colors_of_meaning.infrastructure.ml.supervised_pytorch_color_mapper import 
 class TestDocumentsSource:
     @patch("colors_of_meaning.interface.cli.train.DocumentCorpusDatasetAdapter")
     def test_should_build_document_corpus_with_the_requested_split_strategy(self, mock_adapter: Mock) -> None:
-        _build_document_corpus(TrainArgs(source="documents", split_strategy="paragraph"))
+        _build_document_corpus(TrainArgs(source="documents", split_strategy="paragraph"), Mock())
 
         assert mock_adapter.call_args.kwargs["split_strategy"] == "paragraph"
 
@@ -75,6 +76,18 @@ class TestDocumentsSource:
         result = _load_training_data(TrainArgs(source="documents"), Mock())
 
         assert result == (["t"], None, None)
+
+    def test_should_override_paragraphs_per_work_when_argument_is_provided(self) -> None:
+        config = Mock()
+        config.dataset.paragraphs_per_work = 60
+
+        assert _resolve_paragraphs_per_work(TrainArgs(paragraphs_per_work=300), config) == 300
+
+    def test_should_fall_back_to_config_paragraphs_per_work_when_not_overridden(self) -> None:
+        config = Mock()
+        config.dataset.paragraphs_per_work = 300
+
+        assert _resolve_paragraphs_per_work(TrainArgs(), config) == 300
 
 
 class TestValidationSelection:
