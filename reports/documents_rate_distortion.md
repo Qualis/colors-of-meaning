@@ -13,28 +13,28 @@ Library versions: numpy 2.4.6, scikit-learn 1.9.0.
 
 | method | bits/token | distortion | metric | accuracy |
 |---|---|---|---|---|
-| color_vq | 3.00 | 153.674758 | ΔE | 0.1600 |
-| color_vq | 6.00 | 41.806017 | ΔE | 0.2567 |
-| color_vq | 9.00 | 15.044891 | ΔE | 0.1767 |
-| color_vq | 12.00 | 6.855841 | ΔE | 0.1700 |
-| gzip | 11393.39 | 0.000000 | MSE | n/a |
-| pq | 3.00 | 0.001845 | MSE | n/a |
-| pq | 6.00 | 0.001889 | MSE | n/a |
-| pq | 9.00 | 0.001891 | MSE | n/a |
-| pq | 12.00 | 0.001862 | MSE | n/a |
+| color_vq | 3.00 | 102.092743 | ΔE | 0.0533 |
+| color_vq | 6.00 | 33.613650 | ΔE | 0.0767 |
+| color_vq | 9.00 | 14.524794 | ΔE | 0.0800 |
+| color_vq | 12.00 | 6.706585 | ΔE | 0.0900 |
+| gzip | 11394.27 | 0.000000 | MSE | n/a |
+| pq | 3.00 | 0.001943 | MSE | n/a |
+| pq | 6.00 | 0.001937 | MSE | n/a |
+| pq | 9.00 | 0.001929 | MSE | n/a |
+| pq | 12.00 | 0.001898 | MSE | n/a |
 
 ## Matched-budget comparison
 
 | bits/token | method | distortion | metric |
 |---|---|---|---|
-| 3.00 | color_vq | 153.674758 | ΔE |
-| 3.00 | pq | 0.001845 | MSE |
-| 6.00 | color_vq | 41.806017 | ΔE |
-| 6.00 | pq | 0.001889 | MSE |
-| 9.00 | color_vq | 15.044891 | ΔE |
-| 9.00 | pq | 0.001891 | MSE |
-| 12.00 | color_vq | 6.855841 | ΔE |
-| 12.00 | pq | 0.001862 | MSE |
+| 3.00 | color_vq | 102.092743 | ΔE |
+| 3.00 | pq | 0.001943 | MSE |
+| 6.00 | color_vq | 33.613650 | ΔE |
+| 6.00 | pq | 0.001937 | MSE |
+| 9.00 | color_vq | 14.524794 | ΔE |
+| 9.00 | pq | 0.001929 | MSE |
+| 12.00 | color_vq | 6.706585 | ΔE |
+| 12.00 | pq | 0.001898 | MSE |
 
 ## Pareto frontier
 
@@ -45,12 +45,15 @@ is not directly comparable; read each codec's own curve in the figure rather tha
 
 | method | bits/token | distortion | metric |
 |---|---|---|---|
-| color_vq | 3.00 | 153.674758 | ΔE |
-| pq | 3.00 | 0.001845 | MSE |
-| color_vq | 6.00 | 41.806017 | ΔE |
-| color_vq | 9.00 | 15.044891 | ΔE |
-| color_vq | 12.00 | 6.855841 | ΔE |
-| gzip | 11393.39 | 0.000000 | MSE |
+| color_vq | 3.00 | 102.092743 | ΔE |
+| pq | 3.00 | 0.001943 | MSE |
+| color_vq | 6.00 | 33.613650 | ΔE |
+| pq | 6.00 | 0.001937 | MSE |
+| color_vq | 9.00 | 14.524794 | ΔE |
+| pq | 9.00 | 0.001929 | MSE |
+| color_vq | 12.00 | 6.706585 | ΔE |
+| pq | 12.00 | 0.001898 | MSE |
+| gzip | 11394.27 | 0.000000 | MSE |
 
 ## Reproduce
 
