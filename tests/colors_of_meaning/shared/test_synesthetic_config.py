@@ -9,6 +9,7 @@ from colors_of_meaning.shared.synesthetic_config import (
     DatasetConfig,
     StructuredMapperConfig,
     SupervisedMapperConfig,
+    CompassConfig,
 )
 
 
@@ -404,6 +405,81 @@ supervised_mapper:
         loaded = SynestheticConfig.from_yaml(str(config_path))
         assert loaded.supervised_mapper.classification_weight == 0.3
         assert loaded.supervised_mapper.num_classes == 8
+
+
+class TestCompassConfig:
+    def test_should_default_drift_threshold(self) -> None:
+        config = CompassConfig()
+
+        assert config.drift_threshold == 25.0
+
+    def test_should_default_min_beat_chars(self) -> None:
+        config = CompassConfig()
+
+        assert config.min_beat_chars == 200
+
+    def test_should_default_mapper_to_structured(self) -> None:
+        config = CompassConfig()
+
+        assert config.mapper == "structured"
+
+    def test_should_default_metric_to_sliced(self) -> None:
+        config = CompassConfig()
+
+        assert config.metric == "sliced"
+
+    def test_should_default_report_and_figure_paths(self) -> None:
+        config = CompassConfig()
+
+        assert config.report_path == "reports/story_compass.md"
+        assert config.figure_path == "reports/figures/story_compass.png"
+
+
+class TestCompassInSynestheticConfig:
+    def test_should_default_compass_in_post_init(self) -> None:
+        config = SynestheticConfig(
+            projector=ProjectorConfig(),
+            codebook=CodebookConfig(),
+            training=TrainingConfig(),
+            distance=DistanceConfig(),
+            dataset=DatasetConfig(),
+        )
+
+        assert isinstance(config.compass, CompassConfig)
+
+    def test_should_default_compass_when_missing_from_yaml(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "minimal.yaml"
+        config_path.write_text("{}")
+
+        config = SynestheticConfig.from_yaml(str(config_path))
+
+        assert config.compass.drift_threshold == 25.0
+
+    def test_should_load_compass_from_yaml(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("compass:\n  drift_threshold: 12.5\n  metric: exact\n")
+
+        config = SynestheticConfig.from_yaml(str(config_path))
+
+        assert config.compass.drift_threshold == 12.5
+        assert config.compass.metric == "exact"
+
+    def test_should_round_trip_compass_through_yaml(self, tmp_path: Path) -> None:
+        config = SynestheticConfig(
+            projector=ProjectorConfig(),
+            codebook=CodebookConfig(),
+            training=TrainingConfig(),
+            distance=DistanceConfig(),
+            dataset=DatasetConfig(),
+            compass=CompassConfig(drift_threshold=9.0, mapper="plain"),
+        )
+        config_path = tmp_path / "output.yaml"
+
+        config.to_yaml(str(config_path))
+
+        loaded = SynestheticConfig.from_yaml(str(config_path))
+        assert loaded.compass.drift_threshold == 9.0
+        assert loaded.compass.mapper == "plain"
 
 
 CONFIGS_DIR = Path(__file__).resolve().parents[3] / "configs"

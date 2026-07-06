@@ -3,6 +3,7 @@ from typing import List
 
 from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
+from colors_of_meaning.domain.model.narrative_arc import NarrativeArc
 from colors_of_meaning.domain.model.rate_distortion_point import RateDistortionFrontier
 
 
@@ -56,4 +57,8 @@ class FigureRenderer(ABC):
 
     @abstractmethod
     def render_rate_distortion(self, frontier: RateDistortionFrontier, output_path: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def render_narrative_arc(self, arc: NarrativeArc, output_path: str) -> None:
         raise NotImplementedError

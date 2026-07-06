@@ -62,6 +62,16 @@ class SupervisedMapperConfig:
 
 
 @dataclass
+class CompassConfig:
+    drift_threshold: float = 25.0
+    min_beat_chars: int = 200
+    mapper: str = "structured"
+    metric: str = "sliced"
+    report_path: str = "reports/story_compass.md"
+    figure_path: str = "reports/figures/story_compass.png"
+
+
+@dataclass
 class SynestheticConfig:
     projector: ProjectorConfig
     codebook: CodebookConfig
@@ -70,12 +80,15 @@ class SynestheticConfig:
     dataset: DatasetConfig
     structured_mapper: Optional[StructuredMapperConfig] = None
     supervised_mapper: Optional["SupervisedMapperConfig"] = None
+    compass: Optional["CompassConfig"] = None
 
     def __post_init__(self) -> None:
         if self.structured_mapper is None:
             self.structured_mapper = StructuredMapperConfig()
         if self.supervised_mapper is None:
             self.supervised_mapper = SupervisedMapperConfig()
+        if self.compass is None:
+            self.compass = CompassConfig()
 
     @classmethod
     def from_yaml(cls, path: str) -> "SynestheticConfig":
@@ -93,6 +106,7 @@ class SynestheticConfig:
             dataset=DatasetConfig(**config_dict.get("dataset", {})),
             structured_mapper=StructuredMapperConfig(**config_dict.get("structured_mapper", {})),
             supervised_mapper=supervised_mapper,
+            compass=CompassConfig(**config_dict.get("compass", {})),
         )
 
     def to_yaml(self, path: str) -> None:
@@ -104,6 +118,7 @@ class SynestheticConfig:
             "dataset": self.dataset.__dict__,
             "structured_mapper": self.structured_mapper.__dict__,
             "supervised_mapper": self.supervised_mapper.__dict__,
+            "compass": self.compass.__dict__,
         }
 
         Path(path).parent.mkdir(parents=True, exist_ok=True)

@@ -445,6 +445,36 @@ for future projector model-selection — pick the checkpoint on validation, repo
 Because `./documents/` is git-ignored, a documents-sourced frontier is a local, opt-in run and is
 not regenerated in CI; the committed AG News frontier above remains the reproducible one.
 
+### Narrative Compass
+
+The network is a lossy encoder — it maps a 384-dim embedding to a colour and never runs in reverse,
+so it cannot *write* a book. But the same machinery can **plan and audit** one. Give the `compass`
+CLI an ordered story outline (headings or blank lines delimit the beats) and it reads the outline as
+a measured **colour trajectory**: each beat's colour is read from its *whole-text* embedding through
+the structured mapper — so **lightness tracks sentiment, chroma tracks concreteness, and hue tracks
+topic** — while each beat is also rendered as a colour *histogram* to measure **drift** (perceptual
+distance between consecutive beats) and **coherence** (distance to the whole-book palette). Beats
+whose coherence exceeds a threshold are flagged as off-key.
+
+The beat colour is read from the beat's document embedding, never the mean of its sentence colours:
+averaging Lab across sentences cancels chroma (`sqrt(a² + b²)`) and would silently destroy the
+concreteness axis. The drift/coherence reading deliberately uses a histogram — a distribution, not
+an average — which is exactly what a `ColoredDocument` represents.
+
+```bash
+tox -e compass -- --outline outlines/sample_story.md --config configs/structured.yaml --model-path artifacts/models/structured_projector.pth --codebook-name codebook_4096 --mapper structured --metric sliced --min-beat-chars 200 --drift-threshold 36.5
+```
+
+![Narrative color compass](reports/figures/story_compass.png)
+
+The committed sample outline is a seven-chapter arc with one deliberately off-key beat — a *Quarterly
+Earnings Review* dropped into a seafaring coming-of-age story. The compass isolates it: its hue flips
+to 16° while every narrative chapter sits near 195°, its lightness dips, and it is the single beat
+whose colour histogram sits farthest from the whole-book palette. The per-beat table and flags are
+written to the committed [`reports/story_compass.md`](reports/story_compass.md) and the figure above,
+both regenerable from the command shown. It never calls an external service, so it is fully
+CI-reproducible; feature 024 (Claude-backed generation) consumes this arc for coherence QA.
+
 ### Generate Visualizations
 
 ```bash
@@ -744,6 +774,7 @@ vagrant ssh
 | `tox -e eval -- [args]` | Evaluate classification performance |
 | `tox -e visualize -- [args]` | Generate visualizations |
 | `tox -e visualize_corpus -- [args]` | Compare labelled text corpora by color (signatures + t-SNE) |
+| `tox -e compass -- [args]` | Read a story outline as a colour trajectory (arc, drift, coherence) |
 | `tox -e query -- [args]` | Query documents by color palette |
 
 ### Test

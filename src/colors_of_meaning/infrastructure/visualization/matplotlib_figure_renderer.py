@@ -11,6 +11,8 @@ from sklearn.metrics import confusion_matrix  # type: ignore
 
 from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
+from colors_of_meaning.domain.model.lab_color import LabColor
+from colors_of_meaning.domain.model.narrative_arc import NarrativeArc
 from colors_of_meaning.domain.model.rate_distortion_point import (
     RateDistortionFrontier,
     RateDistortionPoint,
@@ -22,6 +24,7 @@ matplotlib.use("Agg")
 
 FIGURE_DPI = 150
 RATE_DISTORTION_FIGURE_SIZE = (11.0, 7.0)
+NARRATIVE_ARC_FIGURE_SIZE = (11.0, 9.0)
 
 
 class MatplotlibFigureRenderer(FigureRenderer):
@@ -205,6 +208,41 @@ class MatplotlibFigureRenderer(FigureRenderer):
         distortion_axis.set_title("Rate-distortion frontier for semantic color compression")
         self._merge_legends(distortion_axis, accuracy_axis)
         self._save_figure(fig, output_path, tight=False)
+
+    def render_narrative_arc(self, arc: NarrativeArc, output_path: str) -> None:
+        fig, axes = plt.subplots(5, 1, figsize=NARRATIVE_ARC_FIGURE_SIZE)
+        beat_indices = list(range(arc.beat_count))
+        self._plot_curve(axes[0], beat_indices, arc.lightness_series, "Lightness (sentiment)", "tab:orange")
+        self._plot_curve(axes[1], beat_indices, arc.chroma_series, "Chroma (concreteness)", "tab:green")
+        self._plot_curve(axes[2], beat_indices, arc.hue_series, "Hue deg (topic)", "tab:blue")
+        self._plot_drift(axes[3], arc.drift_series)
+        self._plot_swatch_strip(axes[4], arc.colours)
+        fig.suptitle("Narrative color compass")
+        fig.tight_layout()
+        self._save_figure(fig, output_path, tight=False)
+
+    @staticmethod
+    def _plot_curve(ax: Any, beat_indices: List[int], values: List[float], ylabel: str, color: str) -> None:
+        ax.plot(beat_indices, values, marker="o", color=color)
+        ax.set_ylabel(ylabel)
+        ax.set_xticks(beat_indices)
+
+    @staticmethod
+    def _plot_drift(ax: Any, drift_series: List[float]) -> None:
+        positions = [index + 0.5 for index in range(len(drift_series))]
+        ax.plot(positions, drift_series, marker="s", color="tab:red")
+        ax.set_ylabel("Drift (beat to beat)")
+
+    @staticmethod
+    def _plot_swatch_strip(ax: Any, colours: List[LabColor]) -> None:
+        for position, colour in enumerate(colours):
+            rgb = np.array(lab_to_rgb(colour), dtype=float) / 255.0
+            ax.barh(0, 1.0, left=position, height=1.0, color=rgb)
+        ax.set_xlim(0, len(colours))
+        ax.set_ylim(-0.5, 0.5)
+        ax.set_yticks([])
+        ax.set_xticks([])
+        ax.set_xlabel("Beat colours (left to right)")
 
     @staticmethod
     def _method_points(frontier: RateDistortionFrontier, method: str) -> List[RateDistortionPoint]:

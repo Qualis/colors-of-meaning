@@ -9,6 +9,11 @@ from PIL import Image
 from colors_of_meaning.domain.model.lab_color import LabColor
 from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
+from colors_of_meaning.domain.model.narrative_arc import (
+    ArcPoint,
+    NarrativeArc,
+    NarrativeBeat,
+)
 from colors_of_meaning.domain.model.rate_distortion_point import (
     RateDistortionFrontier,
     RateDistortionPoint,
@@ -16,9 +21,12 @@ from colors_of_meaning.domain.model.rate_distortion_point import (
 from colors_of_meaning.domain.service.figure_renderer import FigureRenderer
 from colors_of_meaning.infrastructure.visualization.matplotlib_figure_renderer import (
     FIGURE_DPI,
+    NARRATIVE_ARC_FIGURE_SIZE,
     RATE_DISTORTION_FIGURE_SIZE,
     MatplotlibFigureRenderer,
 )
+
+MODULE = "colors_of_meaning.infrastructure.visualization.matplotlib_figure_renderer"
 
 
 class TestMatplotlibFigureRendererInterface:
@@ -732,6 +740,82 @@ class TestRenderRateDistortion:
         with Image.open(output_path) as image:
             rendered_size = image.size
         assert rendered_size == expected
+
+
+def _narrative_arc(beats: int = 3) -> NarrativeArc:
+    points = [
+        ArcPoint(
+            beat=NarrativeBeat(index=index, title=f"Beat {index}", text="prose"),
+            colour=LabColor(l=40.0 + index * 5.0, a=12.0, b=-8.0),
+            histogram=ColoredDocument(histogram=np.full(4, 0.25, dtype=np.float64)),
+        )
+        for index in range(beats)
+    ]
+    return NarrativeArc(points=points, drift_series=[0.1] * (beats - 1), coherence_series=[0.2] * beats)
+
+
+class TestRenderNarrativeArc:
+    def test_should_write_a_non_empty_narrative_arc_png(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        output_path = str(tmp_path / "story_compass.png")
+
+        renderer.render_narrative_arc(_narrative_arc(), output_path)
+
+        assert os.path.getsize(output_path) > 0
+
+    def test_should_render_narrative_arc_at_exact_uncropped_size(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        output_path = str(tmp_path / "story_compass.png")
+
+        renderer.render_narrative_arc(_narrative_arc(), output_path)
+
+        expected = (int(NARRATIVE_ARC_FIGURE_SIZE[0] * FIGURE_DPI), int(NARRATIVE_ARC_FIGURE_SIZE[1] * FIGURE_DPI))
+        with Image.open(output_path) as image:
+            rendered_size = image.size
+        assert rendered_size == expected
+
+    def test_should_render_a_single_beat_arc_without_crashing(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        output_path = str(tmp_path / "single.png")
+
+        renderer.render_narrative_arc(_narrative_arc(beats=1), output_path)
+
+        assert os.path.getsize(output_path) > 0
+
+    @patch(f"{MODULE}.plt")
+    @patch(f"{MODULE}.lab_to_rgb")
+    def test_should_create_five_stacked_panels(self, mock_lab_to_rgb: Mock, mock_plt: Mock, tmp_path: Path) -> None:
+        mock_lab_to_rgb.return_value = (128, 128, 128)
+        mock_plt.subplots.return_value = (Mock(), np.array([Mock() for _ in range(5)]))
+
+        MatplotlibFigureRenderer().render_narrative_arc(_narrative_arc(), str(tmp_path / "arc.png"))
+
+        mock_plt.subplots.assert_called_once_with(5, 1, figsize=NARRATIVE_ARC_FIGURE_SIZE)
+
+    @patch(f"{MODULE}.plt")
+    @patch(f"{MODULE}.lab_to_rgb")
+    def test_should_draw_one_swatch_per_beat(self, mock_lab_to_rgb: Mock, mock_plt: Mock, tmp_path: Path) -> None:
+        mock_lab_to_rgb.return_value = (128, 128, 128)
+        axes = np.array([Mock() for _ in range(5)])
+        mock_plt.subplots.return_value = (Mock(), axes)
+
+        MatplotlibFigureRenderer().render_narrative_arc(_narrative_arc(beats=3), str(tmp_path / "arc.png"))
+
+        assert axes[4].barh.call_count == 3
+
+    @patch(f"{MODULE}.plt")
+    @patch(f"{MODULE}.lab_to_rgb")
+    def test_should_save_narrative_arc_without_cropping(
+        self, mock_lab_to_rgb: Mock, mock_plt: Mock, tmp_path: Path
+    ) -> None:
+        mock_lab_to_rgb.return_value = (128, 128, 128)
+        mock_fig = Mock()
+        mock_plt.subplots.return_value = (mock_fig, np.array([Mock() for _ in range(5)]))
+        output_path = str(tmp_path / "arc.png")
+
+        MatplotlibFigureRenderer().render_narrative_arc(_narrative_arc(), output_path)
+
+        mock_fig.savefig.assert_called_once_with(output_path, dpi=150)
 
 
 class TestSaveFigure:

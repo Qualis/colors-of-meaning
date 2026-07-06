@@ -64,8 +64,44 @@ def test_should_use_application_use_case_in_cli() -> None:
             "colors_of_meaning.interface.cli.decode_lossless",
             "colors_of_meaning.interface.cli.interpretability",
             "colors_of_meaning.interface.cli.rate_distortion",
+            "colors_of_meaning.interface.cli.compass",
         )
         .should_import("colors_of_meaning.application.use_case.*")
+        .check("colors_of_meaning")
+    )
+
+
+def test_should_keep_the_narrative_arc_model_free_of_frameworks() -> None:
+    (
+        archrule(
+            "Narrative Arc Model Purity",
+            comment="The narrative arc value object must stay free of ML, distance, and I/O frameworks",
+        )
+        .match("colors_of_meaning.domain.model.narrative_arc")
+        .should_not_import(
+            "torch",
+            "torch.*",
+            "matplotlib",
+            "matplotlib.*",
+            "ot",
+            "ot.*",
+        )
+        .check("colors_of_meaning")
+    )
+
+
+def test_should_keep_the_outline_parser_free_of_upper_layers() -> None:
+    (
+        archrule(
+            "Outline Parser Independence",
+            comment="The shared outline parser must not import application, infrastructure, or interface",
+        )
+        .match("colors_of_meaning.shared.outline_parser")
+        .should_not_import(
+            "colors_of_meaning.application.*",
+            "colors_of_meaning.infrastructure.*",
+            "colors_of_meaning.interface.*",
+        )
         .check("colors_of_meaning")
     )
 

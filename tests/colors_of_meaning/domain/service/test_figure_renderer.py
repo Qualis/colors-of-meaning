@@ -26,6 +26,9 @@ class TestFigureRenderer:
     def test_should_define_render_rate_distortion_method(self) -> None:
         assert hasattr(FigureRenderer, "render_rate_distortion")
 
+    def test_should_define_render_narrative_arc_method(self) -> None:
+        assert hasattr(FigureRenderer, "render_narrative_arc")
+
     def test_should_allow_concrete_implementation(self) -> None:
         class ConcreteFigureRenderer(FigureRenderer):
             def render_codebook_palette(self, codebook, output_path):  # type: ignore
@@ -44,6 +47,9 @@ class TestFigureRenderer:
                 pass
 
             def render_rate_distortion(self, frontier, output_path):  # type: ignore
+                pass
+
+            def render_narrative_arc(self, arc, output_path):  # type: ignore
                 pass
 
         renderer = ConcreteFigureRenderer()

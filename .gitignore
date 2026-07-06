@@ -74,6 +74,7 @@ reports/*
 !reports/rate_distortion.md
 !reports/documents_authorship.md
 !reports/documents_rate_distortion.md
+!reports/story_compass.md
 !reports/figures
 reports/figures/*
 !reports/figures/rate_distortion.png
@@ -82,6 +83,7 @@ reports/figures/*
 !reports/figures/documents_rate_distortion.png
 !reports/figures/documents_a4_gallery.png
 !reports/figures/lossless_a_christmas_carol.png
+!reports/figures/story_compass.png
 !reports/figures/a4/
 
 # Training data (sample data is tracked separately)
