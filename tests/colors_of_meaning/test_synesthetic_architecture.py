@@ -352,3 +352,45 @@ def test_should_not_have_circular_dependencies() -> None:
         )
         .check("colors_of_meaning")
     )
+
+
+def _imports_anthropic(module: str, all_imports: dict) -> bool:
+    return any(
+        imported == "anthropic" or imported.startswith("anthropic.") for imported in all_imports.get(module, set())
+    )
+
+
+def test_should_confine_anthropic_to_the_generation_adapter() -> None:
+    (
+        archrule(
+            "Text Generation Provider Confinement",
+            comment="The anthropic SDK must stay out of the domain and application layers",
+        )
+        .match("colors_of_meaning.domain.*", "colors_of_meaning.application.*")
+        .should(
+            lambda module, direct_imports, all_imports: not _imports_anthropic(module, all_imports),
+            "does_not_import_anthropic",
+        )
+        .check("colors_of_meaning")
+    )
+
+
+def test_should_import_anthropic_in_the_generation_adapter() -> None:
+    (
+        archrule(
+            "Anthropic Adapter Infrastructure",
+            comment="The Claude-backed text generator lives in infrastructure and may depend on anthropic",
+        )
+        .match("colors_of_meaning.infrastructure.generation.anthropic_text_generator_adapter")
+        .should_import("anthropic")
+        .check("colors_of_meaning")
+    )
+
+
+def test_should_implement_text_generator_in_the_anthropic_adapter() -> None:
+    from colors_of_meaning.domain.service.text_generator import TextGenerator
+    from colors_of_meaning.infrastructure.generation.anthropic_text_generator_adapter import (
+        AnthropicTextGeneratorAdapter,
+    )
+
+    assert issubclass(AnthropicTextGeneratorAdapter, TextGenerator)

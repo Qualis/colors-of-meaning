@@ -475,6 +475,44 @@ written to the committed [`reports/story_compass.md`](reports/story_compass.md) 
 both regenerable from the command shown. It never calls an external service, so it is fully
 CI-reproducible; feature 024 (Claude-backed generation) consumes this arc for coherence QA.
 
+### Generate a book
+
+The compass plans and audits; it cannot *write*. Writing comprehensible prose needs the opposite kind
+of model — an autoregressive language model — so the `generate` CLI adds one behind a provider-agnostic
+`TextGenerator` port and pairs it with the compass: **an LLM writes the book and the colour pipeline
+plans and audits it.** From a one-paragraph summary the `GenerateBookUseCase` asks the generator for a
+structured **outline** of beats, writes each chapter in order with the preceding chapters in context,
+and after each beat runs the narrative compass over the beats so far. A chapter whose colour signature
+drifts beyond the threshold is **regenerated once or twice with a corrective note** (a bounded retry
+budget); if it still drifts it is recorded in the book's *flagged beats* rather than silently accepted.
+
+The generator is Claude, reached through the official `anthropic` SDK behind the `TextGenerator` port,
+so the domain and application layers stay provider-agnostic. The adapter defaults to `claude-opus-4-8`
+with adaptive thinking and `effort: high`; it plans the outline with **structured outputs**
+(`messages.parse`) and streams each chapter with `messages.stream().get_final_message()`, caching the
+summary-plus-outline "bible" so per-beat calls only pay for the delta. Refusals and typed API errors
+surface as a domain-level `GenerationError`.
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # required — generation needs a live key
+tox -e generate -- --summary "A lighthouse keeper on a fog-bound coast befriends the ghost of a drowned sailor." --num-beats 6 --words-per-beat 500 --tone "sombre, tender" --config configs/structured.yaml --model-path artifacts/models/structured_projector.pth
+```
+
+Chapters are written to `reports/book/NN_<title>.md`, the compass audit to `reports/book/arc.md`, and
+the arc figure to `reports/figures/story_book.png`. **This is the first feature that needs a live API
+key and therefore is not run in CI**: the whole unit suite mocks the SDK client (no network, a
+consumer-driven contract test pins the request shape), and a generated book is a local, opt-in artifact
+— the compass report above remains the CI-reproducible colour artifact.
+
+**Example run** (one output; needs a key, so it is not committed and not CI-reproducible — re-run the
+command to produce your own). From the summary above, `claude-opus-4-8` wrote a six-chapter lighthouse
+ghost story (~520 words per chapter, ~16.1k input / 7.2k output tokens) and the compass passed it clean
+— **0 chapters regenerated, 0 flagged**, coherence 5.6–18.2 against the 25 threshold. The audit is the
+interesting part: lightness and hue both dip through *The Wreck Remembered* and *The Failing Light* (the
+flashback and the crisis) and recover at the finale *Slack Water*, with the largest beat-to-beat drift
+at the tonal turn into chapter two. The colour trajectory follows the story's emotional arc — which the
+pipeline only ever read as an embedding, never as prose.
+
 ### Generate Visualizations
 
 ```bash

@@ -72,6 +72,18 @@ class CompassConfig:
 
 
 @dataclass
+class GenerationConfig:
+    model: str = "claude-opus-4-8"
+    effort: str = "high"
+    outline_max_tokens: int = 4096
+    prose_max_tokens: int = 16000
+    num_beats: int = 8
+    words_per_beat: int = 400
+    retry_budget: int = 2
+    drift_threshold: float = 25.0
+
+
+@dataclass
 class SynestheticConfig:
     projector: ProjectorConfig
     codebook: CodebookConfig
@@ -81,6 +93,7 @@ class SynestheticConfig:
     structured_mapper: Optional[StructuredMapperConfig] = None
     supervised_mapper: Optional["SupervisedMapperConfig"] = None
     compass: Optional["CompassConfig"] = None
+    generation: Optional["GenerationConfig"] = None
 
     def __post_init__(self) -> None:
         if self.structured_mapper is None:
@@ -89,6 +102,8 @@ class SynestheticConfig:
             self.supervised_mapper = SupervisedMapperConfig()
         if self.compass is None:
             self.compass = CompassConfig()
+        if self.generation is None:
+            self.generation = GenerationConfig()
 
     @classmethod
     def from_yaml(cls, path: str) -> "SynestheticConfig":
@@ -107,6 +122,7 @@ class SynestheticConfig:
             structured_mapper=StructuredMapperConfig(**config_dict.get("structured_mapper", {})),
             supervised_mapper=supervised_mapper,
             compass=CompassConfig(**config_dict.get("compass", {})),
+            generation=GenerationConfig(**config_dict.get("generation", {})),
         )
 
     def to_yaml(self, path: str) -> None:
@@ -119,6 +135,7 @@ class SynestheticConfig:
             "structured_mapper": self.structured_mapper.__dict__,
             "supervised_mapper": self.supervised_mapper.__dict__,
             "compass": self.compass.__dict__,
+            "generation": self.generation.__dict__,
         }
 
         Path(path).parent.mkdir(parents=True, exist_ok=True)

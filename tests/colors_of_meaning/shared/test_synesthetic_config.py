@@ -10,6 +10,7 @@ from colors_of_meaning.shared.synesthetic_config import (
     StructuredMapperConfig,
     SupervisedMapperConfig,
     CompassConfig,
+    GenerationConfig,
 )
 
 
@@ -480,6 +481,80 @@ class TestCompassInSynestheticConfig:
         loaded = SynestheticConfig.from_yaml(str(config_path))
         assert loaded.compass.drift_threshold == 9.0
         assert loaded.compass.mapper == "plain"
+
+
+class TestGenerationConfig:
+    def test_should_default_model_to_opus(self) -> None:
+        config = GenerationConfig()
+
+        assert config.model == "claude-opus-4-8"
+
+    def test_should_default_effort_to_high(self) -> None:
+        config = GenerationConfig()
+
+        assert config.effort == "high"
+
+    def test_should_default_retry_budget(self) -> None:
+        config = GenerationConfig()
+
+        assert config.retry_budget == 2
+
+    def test_should_default_drift_threshold(self) -> None:
+        config = GenerationConfig()
+
+        assert config.drift_threshold == 25.0
+
+    def test_should_default_prose_max_tokens(self) -> None:
+        config = GenerationConfig()
+
+        assert config.prose_max_tokens == 16000
+
+
+class TestGenerationInSynestheticConfig:
+    def test_should_default_generation_in_post_init(self) -> None:
+        config = SynestheticConfig(
+            projector=ProjectorConfig(),
+            codebook=CodebookConfig(),
+            training=TrainingConfig(),
+            distance=DistanceConfig(),
+            dataset=DatasetConfig(),
+        )
+
+        assert isinstance(config.generation, GenerationConfig)
+
+    def test_should_default_generation_when_missing_from_yaml(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "minimal.yaml"
+        config_path.write_text("{}")
+
+        config = SynestheticConfig.from_yaml(str(config_path))
+
+        assert config.generation.model == "claude-opus-4-8"
+
+    def test_should_load_generation_from_yaml(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("generation:\n  num_beats: 12\n  effort: max\n")
+
+        config = SynestheticConfig.from_yaml(str(config_path))
+
+        assert config.generation.num_beats == 12
+        assert config.generation.effort == "max"
+
+    def test_should_round_trip_generation_through_yaml(self, tmp_path: Path) -> None:
+        config = SynestheticConfig(
+            projector=ProjectorConfig(),
+            codebook=CodebookConfig(),
+            training=TrainingConfig(),
+            distance=DistanceConfig(),
+            dataset=DatasetConfig(),
+            generation=GenerationConfig(retry_budget=5, words_per_beat=750),
+        )
+        config_path = tmp_path / "output.yaml"
+
+        config.to_yaml(str(config_path))
+
+        loaded = SynestheticConfig.from_yaml(str(config_path))
+        assert loaded.generation.retry_budget == 5
+        assert loaded.generation.words_per_beat == 750
 
 
 CONFIGS_DIR = Path(__file__).resolve().parents[3] / "configs"
