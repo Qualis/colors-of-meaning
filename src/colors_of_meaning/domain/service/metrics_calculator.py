@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
 from colors_of_meaning.domain.model.evaluation_result import EvaluationResult
 from colors_of_meaning.domain.model.evaluation_sample import EvaluationSample
@@ -39,4 +39,13 @@ class MetricsCalculator(ABC):
         relevant_label: int,
         retrieved_labels: List[int],
     ) -> float:
+        raise NotImplementedError
+
+    @abstractmethod
+    def calculate_ndcg_at_k(
+        self,
+        queries: List[EvaluationSample],
+        search_results: List[List[Tuple[EvaluationSample, float]]],
+        k_values: List[int],
+    ) -> Dict[int, float]:
         raise NotImplementedError

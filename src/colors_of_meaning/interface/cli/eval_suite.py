@@ -206,8 +206,8 @@ def _fidelity_rows(fidelity: DistanceFidelity) -> List[str]:
 
 def _result_rows(evaluated_cells: Sequence[EvaluatedCell]) -> List[str]:
     rows = [
-        "| dataset | method | distance | budget | accuracy | macro_f1 | mrr | bits/token | seconds |",
-        "|---------|--------|----------|--------|----------|----------|-----|------------|---------|",
+        "| dataset | method | distance | budget | accuracy | macro_f1 | bits/token | seconds |",
+        "|---------|--------|----------|--------|----------|----------|------------|---------|",
     ]
     for evaluated in evaluated_cells:
         rows.append(_result_row(evaluated))
@@ -221,7 +221,7 @@ def _result_row(evaluated: EvaluatedCell) -> str:
     bits = "n/a" if cell.bits_per_token is None else f"{cell.bits_per_token:.2f}"
     return (
         f"| {cell.dataset} | {cell.method} | {cell.distance} | {budget} | {result.accuracy:.4f} | "
-        f"{result.macro_f1:.4f} | {result.mrr:.4f} | {bits} | {evaluated.seconds:.1f} |"
+        f"{result.macro_f1:.4f} | {bits} | {evaluated.seconds:.1f} |"
     )
 
 
@@ -263,6 +263,9 @@ def _report_lines(
         *_fidelity_rows(fidelity),
         "",
         "## Results",
+        "",
+        "Classification metrics only. Retrieval quality (label-based MRR and recall@k) is measured "
+        "separately via `eval --task retrieval` and is not reported as a constant here.",
         "",
         *_result_rows(evaluated_cells),
         "",

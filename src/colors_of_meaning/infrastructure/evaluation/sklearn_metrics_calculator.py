@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple, Optional
-from sklearn.metrics import accuracy_score, f1_score  # type: ignore
+from sklearn.metrics import accuracy_score, f1_score, ndcg_score  # type: ignore
 
 from colors_of_meaning.domain.service.metrics_calculator import MetricsCalculator
 from colors_of_meaning.domain.model.evaluation_result import EvaluationResult
@@ -93,3 +93,34 @@ class SklearnMetricsCalculator(MetricsCalculator):
             if label == relevant_label:
                 return 1.0 / rank
         return 0.0
+
+    def calculate_ndcg_at_k(
+        self,
+        queries: List[EvaluationSample],
+        search_results: List[List[Tuple[EvaluationSample, float]]],
+        k_values: List[int],
+    ) -> Dict[int, float]:
+        return {k: self._mean_ndcg_at_k(queries, search_results, k) for k in k_values}
+
+    def _mean_ndcg_at_k(
+        self,
+        queries: List[EvaluationSample],
+        search_results: List[List[Tuple[EvaluationSample, float]]],
+        k: int,
+    ) -> float:
+        scores = [
+            self._single_query_ndcg(query, results, k)
+            for query, results in zip(queries, search_results)
+            if len(results) >= 2
+        ]
+        return sum(scores) / len(scores) if scores else 0.0
+
+    def _single_query_ndcg(
+        self,
+        query: EvaluationSample,
+        results: List[Tuple[EvaluationSample, float]],
+        k: int,
+    ) -> float:
+        relevance = [1.0 if sample.label == query.label else 0.0 for sample, _ in results]
+        ranking_scores = [-distance for _, distance in results]
+        return float(ndcg_score([relevance], [ranking_scores], k=k))

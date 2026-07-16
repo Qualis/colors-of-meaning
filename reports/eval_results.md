@@ -13,11 +13,13 @@ Library versions: numpy 2.4.6, scipy 1.17.1, POT 0.9.6.post1.
 
 ## Results
 
-| dataset | method | distance | budget | accuracy | macro_f1 | mrr | bits/token | seconds |
-|---------|--------|----------|--------|----------|----------|-----|------------|---------|
-| ag_news | color | sliced | 4000 | 0.8175 | 0.8178 | 0.0000 | 12.00 | 807.3 |
-| imdb | color | sliced | 600 | 0.5483 | 0.5478 | 0.0000 | 12.00 | 200.4 |
-| newsgroups | color | sliced | 600 | 0.1650 | 0.1535 | 0.0000 | 12.00 | 199.7 |
+Classification metrics only. Retrieval quality (label-based MRR and recall@k) is measured separately via `eval --task retrieval` and is not reported as a constant here.
+
+| dataset | method | distance | budget | accuracy | macro_f1 | bits/token | seconds |
+|---------|--------|----------|--------|----------|----------|------------|---------|
+| ag_news | color | sliced | 4000 | 0.8175 | 0.8178 | 12.00 | 807.3 |
+| imdb | color | sliced | 600 | 0.5483 | 0.5478 | 12.00 | 200.4 |
+| newsgroups | color | sliced | 600 | 0.1650 | 0.1535 | 12.00 | 199.7 |
 
 ## Reproduce
 

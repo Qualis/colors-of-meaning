@@ -203,6 +203,39 @@ def test_should_not_import_sklearn_in_domain_layer() -> None:
     )
 
 
+def test_should_keep_hnswlib_out_of_domain_layer() -> None:
+    (
+        archrule(
+            "Domain Retrieval Index Isolation",
+            comment="The hnswlib nearest-neighbour index dependency must stay out of the domain layer",
+        )
+        .match("colors_of_meaning.domain.*")
+        .should_not_import(
+            "hnswlib",
+            "hnswlib.*",
+        )
+        .check("colors_of_meaning")
+    )
+
+
+def test_should_implement_retriever_in_color_histogram_retriever() -> None:
+    from colors_of_meaning.domain.service.retriever import Retriever
+    from colors_of_meaning.infrastructure.evaluation.color_histogram_retriever import (
+        ColorHistogramRetriever,
+    )
+
+    assert issubclass(ColorHistogramRetriever, Retriever)
+
+
+def test_should_implement_retriever_in_embedding_retriever() -> None:
+    from colors_of_meaning.domain.service.retriever import Retriever
+    from colors_of_meaning.infrastructure.evaluation.embedding_retriever import (
+        EmbeddingRetriever,
+    )
+
+    assert issubclass(EmbeddingRetriever, Retriever)
+
+
 def test_should_confine_structure_preservation_evaluator_scipy_to_infrastructure() -> None:
     (
         archrule(

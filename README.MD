@@ -628,11 +628,31 @@ tox -e eval -- --dataset newsgroups --method hnsw --k-neighbors 10
 
 **Arguments**:
 - `--dataset`: Dataset to evaluate on (`ag_news`, `imdb`, `newsgroups`)
-- `--method`: Classification method (`tfidf`, `hnsw`, `color`)
+- `--method`: Method (`tfidf`, `hnsw`, `color`)
+- `--task`: `classification` (default) or `retrieval`
 - `--k-neighbors`: Number of neighbors for k-NN methods (default: 5)
+- `--k-values`: Cut-offs for retrieval recall@k / NDCG@k (default: `1 5 10`)
 - `--config`: Configuration file (default: `configs/base.yaml`)
 - `--model-path`: Path to trained projector model (default: `artifacts/models/projector.pth`)
 - `--codebook-path`: Color codebook name (default: `codebook_4096`)
+
+Measure retrieval quality (real MRR and recall@k, ranked by the same perceptual
+distance the classifier uses) instead of classification:
+
+```bash
+# Colour-histogram retrieval, ranked by Wasserstein distance
+tox -e eval -- --dataset ag_news --method color --task retrieval --k-values 1 5 10 --config configs/agnews_run.yaml
+
+# Embedding-space retrieval baseline (hnswlib L2 index)
+tox -e eval -- --dataset ag_news --method hnsw --task retrieval --k-values 1 5 10
+```
+
+Retrieval metrics are **label-based** (relevance = shared class label): recall@k is
+"a same-class document appears in the top k" and MRR is `1 / rank` of the first
+same-class hit. This is the standard metric-learning Recall@K convention and is
+correlated with the k-NN classification accuracy by construction — a ranking-quality
+view of the same neighbourhoods, not human-judged IR. `tfidf` is classification-only
+and is skipped (with a reason) under `--task retrieval`.
 
 ### Visualization
 
@@ -929,6 +949,9 @@ colors_of_meaning/
         sentence_embedding_adapter.py
     evaluation/
         color_histogram_classifier.py
+        color_histogram_retrieval_core.py
+        color_histogram_retriever.py
+        embedding_retriever.py
         hnsw_classifier.py
         tfidf_classifier.py
         sklearn_metrics_calculator.py

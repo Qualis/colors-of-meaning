@@ -1,7 +1,6 @@
-from typing import List
-from collections import Counter
+from typing import List, Tuple
 
-from colors_of_meaning.domain.service.classifier import Classifier
+from colors_of_meaning.domain.service.retriever import Retriever
 from colors_of_meaning.domain.model.evaluation_sample import EvaluationSample
 from colors_of_meaning.domain.service.distance_calculator import DistanceCalculator
 from colors_of_meaning.application.use_case.encode_document_use_case import EncodeDocumentUseCase
@@ -13,13 +12,12 @@ from colors_of_meaning.infrastructure.evaluation.color_histogram_retrieval_core 
 )
 
 
-class ColorHistogramClassifier(Classifier):
+class ColorHistogramRetriever(Retriever):
     def __init__(
         self,
         embedding_adapter: SentenceEmbeddingAdapter,
         encode_use_case: EncodeDocumentUseCase,
         distance_calculator: DistanceCalculator,
-        k: int = 5,
         num_candidates: int = 100,
         M: int = 16,  # noqa: N803
         ef_construction: int = 200,
@@ -34,24 +32,13 @@ class ColorHistogramClassifier(Classifier):
             ef_construction=ef_construction,
             ef=ef,
         )
-        self.k = k
 
     def fit(self, samples: List[EvaluationSample]) -> None:
         self.core.fit(samples)
 
-    def predict(self, samples: List[EvaluationSample]) -> List[int]:
+    def search(self, query: EvaluationSample, k: int) -> List[Tuple[EvaluationSample, float]]:
         if self.core.index is None:
-            raise RuntimeError("Classifier must be fitted before prediction")
+            raise RuntimeError("Retriever must be fitted before search")
 
-        return [self._predict_one(sample, idx) for idx, sample in enumerate(samples)]
-
-    def _predict_one(self, sample: EvaluationSample, idx: int) -> int:
-        ranked = self.core.rank(sample, self.k, document_id=f"test_{idx}")
-        neighbor_labels = [self.core.training_samples[index].label for index, _ in ranked]
-        return self._majority_vote(neighbor_labels)
-
-    def _majority_vote(self, labels: List[int]) -> int:
-        if not labels:
-            return 0
-        counter = Counter(labels)
-        return counter.most_common(1)[0][0]
+        ranked = self.core.rank(query, k, document_id="query")
+        return [(self.core.training_samples[index], distance) for index, distance in ranked]

@@ -6,6 +6,10 @@ from colors_of_meaning.infrastructure.evaluation.sklearn_metrics_calculator impo
 from colors_of_meaning.domain.model.evaluation_sample import EvaluationSample
 
 
+def _sample(text: str, label: int) -> EvaluationSample:
+    return EvaluationSample(text=text, label=label, split="test")
+
+
 class TestSklearnMetricsCalculator:
     @pytest.fixture
     def calculator(self) -> SklearnMetricsCalculator:
@@ -162,3 +166,36 @@ class TestSklearnMetricsCalculator:
         result = calculator.calculate_classification_metrics(y_true, y_pred)
 
         assert result.macro_f1 >= 0.0
+
+    def test_should_compute_perfect_ndcg_when_relevant_is_ranked_first(
+        self, calculator: SklearnMetricsCalculator
+    ) -> None:
+        queries = [_sample("q", 0)]
+        search_results = [[(_sample("r0", 0), 0.1), (_sample("r1", 1), 0.2)]]
+
+        ndcg = calculator.calculate_ndcg_at_k(queries, search_results, [2])
+
+        assert ndcg[2] == 1.0
+
+    def test_should_penalise_ndcg_when_relevant_is_ranked_second(self, calculator: SklearnMetricsCalculator) -> None:
+        queries = [_sample("q", 0)]
+        search_results = [[(_sample("r0", 1), 0.1), (_sample("r1", 0), 0.2)]]
+
+        ndcg = calculator.calculate_ndcg_at_k(queries, search_results, [2])
+
+        assert ndcg[2] == pytest.approx(0.63093, abs=1e-4)
+
+    def test_should_return_zero_ndcg_when_rankings_have_fewer_than_two_documents(
+        self, calculator: SklearnMetricsCalculator
+    ) -> None:
+        queries = [_sample("q", 0)]
+        search_results = [[(_sample("r0", 0), 0.1)]]
+
+        ndcg = calculator.calculate_ndcg_at_k(queries, search_results, [1])
+
+        assert ndcg[1] == 0.0
+
+    def test_should_return_zero_ndcg_when_there_are_no_queries(self, calculator: SklearnMetricsCalculator) -> None:
+        ndcg = calculator.calculate_ndcg_at_k([], [], [5])
+
+        assert ndcg[5] == 0.0

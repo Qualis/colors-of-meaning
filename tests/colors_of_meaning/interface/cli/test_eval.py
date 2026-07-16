@@ -12,10 +12,21 @@ from colors_of_meaning.interface.cli.eval import (
     _build_document_corpus,
     _create_color_classifier,
     _create_distance_calculator,
+    _create_retriever,
+    _print_retrieval_results,
     _resolve_max_samples,
     _resolve_paragraphs_per_work,
     _resolved_sinkhorn_reg,
 )
+from colors_of_meaning.domain.model.evaluation_result import EvaluationResult
+from colors_of_meaning.domain.model.retrieval_evaluation import RetrievalEvaluation
+
+
+def _retrieval_evaluation(bits_per_token=None) -> RetrievalEvaluation:
+    result = EvaluationResult(
+        accuracy=0.0, macro_f1=0.0, recall_at_k={1: 0.7, 5: 0.9}, mrr=0.65, bits_per_token=bits_per_token
+    )
+    return RetrievalEvaluation(result=result, ndcg_at_k={1: 0.6, 5: 0.8})
 
 
 class TestEvalDocumentsSource:
@@ -508,3 +519,113 @@ class TestEvalDistanceSelection:
         config.dataset.paragraphs_per_work = 300
 
         assert _resolve_paragraphs_per_work(EvalArgs(), config) == 300
+
+
+def _create_color_retriever_with_mocked_factory() -> tuple:
+    with ExitStack() as stack:
+        stack.enter_context(patch("colors_of_meaning.interface.cli.eval.SentenceEmbeddingAdapter"))
+        stack.enter_context(patch("colors_of_meaning.interface.cli.eval.create_color_mapper"))
+        repo_class = stack.enter_context(patch("colors_of_meaning.interface.cli.eval.FileColorCodebookRepository"))
+        repo_class.return_value.load.return_value = Mock()
+        stack.enter_context(patch("colors_of_meaning.interface.cli.eval.WassersteinDistanceCalculator"))
+        stack.enter_context(patch("colors_of_meaning.interface.cli.eval.EncodeDocumentUseCase"))
+        retriever_class = stack.enter_context(patch("colors_of_meaning.interface.cli.eval.ColorHistogramRetriever"))
+        stack.enter_context(patch("colors_of_meaning.domain.service.color_mapper.QuantizedColorMapper"))
+        stack.enter_context(patch("builtins.print"))
+        retriever, bits = _create_retriever(EvalArgs(method="color"), Mock())
+    return retriever, bits, retriever_class
+
+
+class TestEvalRetrieverSelection:
+    def test_should_default_task_to_classification(self) -> None:
+        assert EvalArgs().task == "classification"
+
+    def test_should_default_k_values(self) -> None:
+        assert EvalArgs().k_values == [1, 5, 10]
+
+    def test_should_build_color_retriever_when_method_is_color(self) -> None:
+        retriever, _, retriever_class = _create_color_retriever_with_mocked_factory()
+
+        assert retriever is retriever_class.return_value
+
+    def test_should_report_color_retriever_bits_per_token(self) -> None:
+        _, bits, _ = _create_color_retriever_with_mocked_factory()
+
+        assert bits == 12.0
+
+    def test_should_build_embedding_retriever_when_method_is_hnsw(self) -> None:
+        with ExitStack() as stack:
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval.SentenceEmbeddingAdapter"))
+            retriever_class = stack.enter_context(patch("colors_of_meaning.interface.cli.eval.EmbeddingRetriever"))
+            stack.enter_context(patch("builtins.print"))
+            retriever, _ = _create_retriever(EvalArgs(method="hnsw"), Mock())
+
+        assert retriever is retriever_class.return_value
+
+    def test_should_raise_when_retrieval_requested_for_tfidf(self) -> None:
+        with pytest.raises(ValueError, match="Retrieval not supported"):
+            _create_retriever(EvalArgs(method="tfidf"), Mock())
+
+    def test_should_raise_for_unknown_method_when_building_retriever(self) -> None:
+        args = EvalArgs()
+        args.method = "weird"  # type: ignore
+
+        with pytest.raises(ValueError, match="Unknown method"):
+            _create_retriever(args, Mock())
+
+
+class TestRetrievalPrinting:
+    def test_should_caption_retrieval_output_as_label_based(self) -> None:
+        with patch("builtins.print") as print_mock:
+            _print_retrieval_results(EvalArgs(method="color"), _retrieval_evaluation())
+
+        assert any("Label-based retrieval" in str(call) for call in print_mock.call_args_list)
+
+    def test_should_print_mrr_in_retrieval_output(self) -> None:
+        with patch("builtins.print") as print_mock:
+            _print_retrieval_results(EvalArgs(method="color"), _retrieval_evaluation())
+
+        assert any("MRR" in str(call) for call in print_mock.call_args_list)
+
+    def test_should_print_recall_at_k_in_retrieval_output(self) -> None:
+        with patch("builtins.print") as print_mock:
+            _print_retrieval_results(EvalArgs(method="color"), _retrieval_evaluation())
+
+        assert any("Recall@1" in str(call) for call in print_mock.call_args_list)
+
+    def test_should_print_ndcg_in_retrieval_output(self) -> None:
+        with patch("builtins.print") as print_mock:
+            _print_retrieval_results(EvalArgs(method="color"), _retrieval_evaluation())
+
+        assert any("NDCG@1" in str(call) for call in print_mock.call_args_list)
+
+    def test_should_print_bits_per_token_in_retrieval_output(self) -> None:
+        with patch("builtins.print") as print_mock:
+            _print_retrieval_results(EvalArgs(method="hnsw"), _retrieval_evaluation(bits_per_token=12.0))
+
+        assert any("Bits per token" in str(call) for call in print_mock.call_args_list)
+
+
+class TestEvalRetrievalMain:
+    def test_should_route_to_retrieval_when_task_is_retrieval(self, tmp_path: Path) -> None:
+        with ExitStack() as stack:
+            config = Mock()
+            config.training.seed = 1
+            stack.enter_context(
+                patch("colors_of_meaning.interface.cli.eval.SynestheticConfig")
+            ).from_yaml.return_value = config
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval.AGNewsDatasetAdapter"))
+            create = stack.enter_context(patch("colors_of_meaning.interface.cli.eval._create_retriever"))
+            create.return_value = (Mock(), 12.0)
+            use_case_class = stack.enter_context(patch("colors_of_meaning.interface.cli.eval.RetrievalEvaluateUseCase"))
+            use_case = Mock()
+            use_case.execute.return_value = _retrieval_evaluation(bits_per_token=12.0)
+            use_case_class.return_value = use_case
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval.SklearnMetricsCalculator"))
+            stack.enter_context(patch("builtins.print"))
+            config_path = tmp_path / "config.yaml"
+            config_path.write_text("dummy")
+
+            main(EvalArgs(config=str(config_path), method="color", task="retrieval"))
+
+        use_case.execute.assert_called_once()

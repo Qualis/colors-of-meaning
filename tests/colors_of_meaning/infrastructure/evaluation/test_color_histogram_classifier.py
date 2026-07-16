@@ -8,6 +8,9 @@ from unittest.mock import Mock, patch
 from colors_of_meaning.infrastructure.evaluation.color_histogram_classifier import (
     ColorHistogramClassifier,
 )
+from colors_of_meaning.infrastructure.evaluation.color_histogram_retrieval_core import (
+    ColorHistogramRetrievalCore,
+)
 from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import WassersteinDistanceCalculator
 from colors_of_meaning.application.use_case.encode_document_use_case import EncodeDocumentUseCase
 from colors_of_meaning.domain.service.color_mapper import ColorMapper, QuantizedColorMapper
@@ -132,8 +135,8 @@ class TestColorHistogramClassifier:
 
         classifier.fit(train_samples)
 
-        assert len(classifier.training_labels) == 4
-        assert len(classifier.training_docs) == 4
+        assert len(classifier.core.training_samples) == 4
+        assert len(classifier.core.training_docs) == 4
         assert mock_embedding_adapter.encode_document_sentences.call_count == 4
         assert mock_encode_use_case.execute.call_count == 4
         mock_index.add_items.assert_called_once()
@@ -170,7 +173,7 @@ class TestColorHistogramClassifier:
 
         classifier.fit(train_samples)
 
-        assert mock_index.set_ef.call_args[0][0] >= classifier.num_candidates
+        assert mock_index.set_ef.call_args[0][0] >= classifier.core.num_candidates
 
     @patch("hnswlib.Index")
     def test_should_pin_single_thread_when_building_index(
@@ -450,8 +453,8 @@ class TestColorHistogramClassifier:
             distance_calculator=mock_distance_calculator,
             k=3,
         )
-        classifier.index = Mock()
-        classifier.training_labels = []
+        classifier.core.index = Mock()
+        classifier.core.training_samples = []
 
         test_samples = [EvaluationSample(text="test", label=0, split="test")]
         predictions = classifier.predict(test_samples)
@@ -480,3 +483,9 @@ class TestColorHistogramClassifier:
             test_samples
         )
         assert accuracy >= 0.8, f"color pipeline accuracy {accuracy} below floor 0.8 (chance 0.5)"
+
+    def test_should_delegate_to_a_shared_retrieval_core(
+        self,
+        classifier: ColorHistogramClassifier,
+    ) -> None:
+        assert isinstance(classifier.core, ColorHistogramRetrievalCore)

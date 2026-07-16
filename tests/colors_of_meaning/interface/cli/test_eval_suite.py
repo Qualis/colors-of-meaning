@@ -26,6 +26,7 @@ from colors_of_meaning.interface.cli.eval_suite import (
     _provenance_line,
     _reproduce_command,
     _result_row,
+    _result_rows,
     _run_fidelity_gate,
     _setup_dataset,
     _write_report,
@@ -222,6 +223,11 @@ class TestEvalSuiteReporting:
             _print_table(_fidelity(), [_evaluated_cell("ag_news")])
 
         assert any(line.startswith("| ag_news | color | sliced |") for line in _printed_lines(print_mock))
+
+    def test_should_not_surface_a_constant_mrr_column_in_results(self) -> None:
+        header = _result_rows([_evaluated_cell("ag_news")])[0]
+
+        assert "mrr" not in header
 
 
 def _run_main(tmp_path: Path, fidelity: DistanceFidelity, evaluated: List[EvaluatedCell]) -> Path:
