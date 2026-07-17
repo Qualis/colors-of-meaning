@@ -13,10 +13,10 @@ Library versions: numpy 2.4.6, scikit-learn 1.9.0.
 
 | method | bits/token | distortion | metric | accuracy |
 |---|---|---|---|---|
-| color_vq | 3.00 | 102.092743 | ΔE | 0.0533 |
-| color_vq | 6.00 | 33.613650 | ΔE | 0.0767 |
-| color_vq | 9.00 | 14.524794 | ΔE | 0.0800 |
-| color_vq | 12.00 | 6.706585 | ΔE | 0.0900 |
+| color_vq | 3.00 | 143.283005 | ΔE | 0.0600 |
+| color_vq | 6.00 | 34.451002 | ΔE | 0.0400 |
+| color_vq | 9.00 | 14.389268 | ΔE | 0.0533 |
+| color_vq | 12.00 | 7.011115 | ΔE | 0.0700 |
 | gzip | 11394.27 | 0.000000 | MSE | n/a |
 | pq | 3.00 | 0.001943 | MSE | n/a |
 | pq | 6.00 | 0.001937 | MSE | n/a |
@@ -27,13 +27,13 @@ Library versions: numpy 2.4.6, scikit-learn 1.9.0.
 
 | bits/token | method | distortion | metric |
 |---|---|---|---|
-| 3.00 | color_vq | 102.092743 | ΔE |
+| 3.00 | color_vq | 143.283005 | ΔE |
 | 3.00 | pq | 0.001943 | MSE |
-| 6.00 | color_vq | 33.613650 | ΔE |
+| 6.00 | color_vq | 34.451002 | ΔE |
 | 6.00 | pq | 0.001937 | MSE |
-| 9.00 | color_vq | 14.524794 | ΔE |
+| 9.00 | color_vq | 14.389268 | ΔE |
 | 9.00 | pq | 0.001929 | MSE |
-| 12.00 | color_vq | 6.706585 | ΔE |
+| 12.00 | color_vq | 7.011115 | ΔE |
 | 12.00 | pq | 0.001898 | MSE |
 
 ## Pareto frontier
@@ -45,13 +45,13 @@ is not directly comparable; read each codec's own curve in the figure rather tha
 
 | method | bits/token | distortion | metric |
 |---|---|---|---|
-| color_vq | 3.00 | 102.092743 | ΔE |
+| color_vq | 3.00 | 143.283005 | ΔE |
 | pq | 3.00 | 0.001943 | MSE |
-| color_vq | 6.00 | 33.613650 | ΔE |
+| color_vq | 6.00 | 34.451002 | ΔE |
 | pq | 6.00 | 0.001937 | MSE |
-| color_vq | 9.00 | 14.524794 | ΔE |
+| color_vq | 9.00 | 14.389268 | ΔE |
 | pq | 9.00 | 0.001929 | MSE |
-| color_vq | 12.00 | 6.706585 | ΔE |
+| color_vq | 12.00 | 7.011115 | ΔE |
 | pq | 12.00 | 0.001898 | MSE |
 | gzip | 11394.27 | 0.000000 | MSE |
 
