@@ -17,8 +17,13 @@ from colors_of_meaning.interface.cli.eval_suite import (
     EvalSuiteArgs,
     main,
     _build_cells,
+    _build_classifier,
     _build_color_classifier,
+    _build_color_retriever,
     _build_evaluate_use_case_factory,
+    _build_retrieval_factory_when_requested,
+    _build_retrieval_use_case_factory,
+    _build_retriever,
     _encode_documents,
     _fidelity_rows,
     _load_codebook,
@@ -27,6 +32,7 @@ from colors_of_meaning.interface.cli.eval_suite import (
     _reproduce_command,
     _result_row,
     _result_rows,
+    _results_note,
     _run_fidelity_gate,
     _setup_dataset,
     _write_report,
@@ -53,35 +59,203 @@ def _evaluated_cell(dataset: str = "ag_news", budget=4000, bits_per_token=12.0) 
     return EvaluatedCell(cell=cell, result=result, seconds=12.3)
 
 
+def _method_cell(method: str) -> EvaluationCell:
+    return EvaluationCell(dataset="ag_news", method=method, distance="sliced", budget=4000, requires_fidelity=False)
+
+
+def _retrieval_evaluated_cell(method: str = "color", mrr: float = 0.9, recall=None) -> EvaluatedCell:
+    recall_at_k = {5: 0.8} if recall is None else recall
+    cell = EvaluationCell(
+        dataset="ag_news",
+        method=method,
+        distance="sliced",
+        budget=4000,
+        requires_fidelity=method == "color",
+        bits_per_token=12.0,
+        supports_retrieval=True,
+    )
+    result = EvaluationResult(accuracy=0.83, macro_f1=0.82, recall_at_k={}, mrr=0.0)
+    retrieval = EvaluationResult(accuracy=0.0, macro_f1=0.0, recall_at_k=recall_at_k, mrr=mrr)
+    return EvaluatedCell(cell=cell, result=result, seconds=12.3, retrieval=retrieval)
+
+
+def _tfidf_skipped_cell() -> EvaluatedCell:
+    cell = EvaluationCell(
+        dataset="ag_news",
+        method="tfidf",
+        distance="sliced",
+        budget=4000,
+        requires_fidelity=False,
+        bits_per_token=None,
+        supports_retrieval=False,
+    )
+    result = EvaluationResult(accuracy=0.82, macro_f1=0.81, recall_at_k={}, mrr=0.0)
+    return EvaluatedCell(
+        cell=cell,
+        result=result,
+        seconds=5.0,
+        retrieval_skip_reason="tfidf is classification-only; retrieval skipped",
+    )
+
+
 def _printed_lines(print_mock: Mock) -> List[str]:
     return [str(call.args[0]) for call in print_mock.call_args_list if call.args]
 
 
 class TestEvalSuiteHelpers:
     def test_should_mark_cells_requiring_fidelity_when_distance_is_sliced(self) -> None:
-        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news", "imdb"], distance="sliced"))
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news", "imdb"], methods=["color"], distance="sliced"))
 
         assert all(cell.requires_fidelity for cell in cells)
 
     def test_should_not_require_fidelity_when_distance_is_exact(self) -> None:
-        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news"], distance="wasserstein"))
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news"], methods=["color"], distance="wasserstein"))
 
         assert cells[0].requires_fidelity is False
 
     def test_should_build_one_cell_per_dataset(self) -> None:
-        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news", "imdb", "newsgroups"]))
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news", "imdb", "newsgroups"], methods=["color"]))
 
         assert [cell.dataset for cell in cells] == ["ag_news", "imdb", "newsgroups"]
 
     def test_should_apply_uniform_budget_when_per_dataset_budgets_absent(self) -> None:
-        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news", "imdb"], budget=1500))
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news", "imdb"], methods=["color"], budget=1500))
 
         assert [cell.budget for cell in cells] == [1500, 1500]
 
     def test_should_apply_per_dataset_budgets_when_provided(self) -> None:
-        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news", "imdb", "newsgroups"], budgets=[4000, 600, 600]))
+        cells = _build_cells(
+            EvalSuiteArgs(datasets=["ag_news", "imdb", "newsgroups"], methods=["color"], budgets=[4000, 600, 600])
+        )
 
         assert [cell.budget for cell in cells] == [4000, 600, 600]
+
+    def test_should_build_one_cell_per_method_per_dataset(self) -> None:
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news", "imdb"], methods=["color", "tfidf", "hnsw"]))
+
+        assert [(cell.dataset, cell.method) for cell in cells] == [
+            ("ag_news", "color"),
+            ("ag_news", "tfidf"),
+            ("ag_news", "hnsw"),
+            ("imdb", "color"),
+            ("imdb", "tfidf"),
+            ("imdb", "hnsw"),
+        ]
+
+    def test_should_share_one_budget_across_methods_of_a_dataset(self) -> None:
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news"], methods=["color", "tfidf", "hnsw"], budget=4000))
+
+        assert {cell.budget for cell in cells} == {4000}
+
+    def test_should_require_fidelity_only_for_color_cells_under_sliced(self) -> None:
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news"], methods=["color", "tfidf", "hnsw"], distance="sliced"))
+
+        assert [cell.method for cell in cells if cell.requires_fidelity] == ["color"]
+
+    def test_should_assign_twelve_bits_per_token_to_color(self) -> None:
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news"], methods=["color"]))
+
+        assert cells[0].bits_per_token == 12.0
+
+    def test_should_assign_full_embedding_bits_per_token_to_hnsw(self) -> None:
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news"], methods=["hnsw"]))
+
+        assert cells[0].bits_per_token == 12288.0
+
+    def test_should_assign_no_bits_per_token_to_tfidf(self) -> None:
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news"], methods=["tfidf"]))
+
+        assert cells[0].bits_per_token is None
+
+    def test_should_mark_color_and_hnsw_as_retrieval_capable(self) -> None:
+        cells = _build_cells(EvalSuiteArgs(datasets=["ag_news"], methods=["color", "tfidf", "hnsw"]))
+
+        assert [cell.method for cell in cells if cell.supports_retrieval] == ["color", "hnsw"]
+
+    def test_should_produce_identical_cells_across_repeat_builds(self) -> None:
+        args = EvalSuiteArgs(datasets=["ag_news", "imdb"], methods=["color", "tfidf", "hnsw"])
+
+        assert _build_cells(args) == _build_cells(args)
+
+    def test_should_build_tfidf_classifier_for_a_tfidf_cell(self) -> None:
+        with patch("colors_of_meaning.interface.cli.eval_suite.TFIDFClassifier") as tfidf_class:
+            classifier = _build_classifier(_method_cell("tfidf"), EvalSuiteArgs(), Mock(), Mock(), Mock(), Mock())
+
+        assert classifier is tfidf_class.return_value
+
+    def test_should_build_hnsw_classifier_for_an_hnsw_cell(self) -> None:
+        with patch("colors_of_meaning.interface.cli.eval_suite.HNSWClassifier") as hnsw_class:
+            classifier = _build_classifier(_method_cell("hnsw"), EvalSuiteArgs(), Mock(), Mock(), Mock(), Mock())
+
+        assert classifier is hnsw_class.return_value
+
+    def test_should_build_color_classifier_for_a_color_cell(self) -> None:
+        with patch("colors_of_meaning.interface.cli.eval_suite._build_color_classifier") as build_color:
+            classifier = _build_classifier(_method_cell("color"), EvalSuiteArgs(), Mock(), Mock(), Mock(), Mock())
+
+        assert classifier is build_color.return_value
+
+    def test_should_raise_for_an_unknown_classifier_method(self) -> None:
+        with pytest.raises(ValueError, match="Unknown method"):
+            _build_classifier(_method_cell("bogus"), EvalSuiteArgs(), Mock(), Mock(), Mock(), Mock())
+
+    def test_should_build_color_retriever_for_a_color_cell(self) -> None:
+        with patch("colors_of_meaning.interface.cli.eval_suite._build_color_retriever") as build_color:
+            retriever = _build_retriever(_method_cell("color"), EvalSuiteArgs(), Mock(), Mock(), Mock(), Mock())
+
+        assert retriever is build_color.return_value
+
+    def test_should_build_embedding_retriever_for_an_hnsw_cell(self) -> None:
+        with patch("colors_of_meaning.interface.cli.eval_suite.EmbeddingRetriever") as retriever_class:
+            retriever = _build_retriever(_method_cell("hnsw"), EvalSuiteArgs(), Mock(), Mock(), Mock(), Mock())
+
+        assert retriever is retriever_class.return_value
+
+    def test_should_raise_when_building_a_retriever_for_tfidf(self) -> None:
+        with pytest.raises(ValueError, match="Retrieval not supported"):
+            _build_retriever(_method_cell("tfidf"), EvalSuiteArgs(), Mock(), Mock(), Mock(), Mock())
+
+    def test_should_build_color_histogram_retriever(self) -> None:
+        with ExitStack() as stack:
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.QuantizedColorMapper"))
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.EncodeDocumentUseCase"))
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._create_distance_calculator"))
+            retriever_class = stack.enter_context(
+                patch("colors_of_meaning.interface.cli.eval_suite.ColorHistogramRetriever")
+            )
+
+            retriever = _build_color_retriever(Mock(), Mock(), Mock(), Mock(), "sliced")
+
+        assert retriever is retriever_class.return_value
+
+    def test_should_build_retrieval_use_case_for_a_capable_cell(self) -> None:
+        with ExitStack() as stack:
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._setup_dataset"))
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._build_retriever"))
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.SklearnMetricsCalculator"))
+            use_case_class = stack.enter_context(
+                patch("colors_of_meaning.interface.cli.eval_suite.RetrievalEvaluateUseCase")
+            )
+            factory = _build_retrieval_use_case_factory(EvalSuiteArgs(), Mock(), Mock(), Mock(), Mock())
+
+            use_case = factory(_method_cell("color"))
+
+        assert use_case is use_case_class.return_value
+
+    def test_should_build_a_retrieval_factory_when_task_is_both(self) -> None:
+        with patch("colors_of_meaning.interface.cli.eval_suite._build_retrieval_use_case_factory") as build:
+            factory = _build_retrieval_factory_when_requested(
+                EvalSuiteArgs(task="both"), Mock(), Mock(), Mock(), Mock()
+            )
+
+        assert factory is build.return_value
+
+    def test_should_not_build_a_retrieval_factory_when_task_is_classification(self) -> None:
+        factory = _build_retrieval_factory_when_requested(
+            EvalSuiteArgs(task="classification"), Mock(), Mock(), Mock(), Mock()
+        )
+
+        assert factory is None
 
     def test_should_raise_when_per_dataset_budgets_length_mismatches_datasets(self) -> None:
         with pytest.raises(ValueError, match="one budget per dataset"):
@@ -229,6 +403,52 @@ class TestEvalSuiteReporting:
 
         assert "mrr" not in header
 
+    def test_should_add_mrr_column_when_retrieval_is_reported(self) -> None:
+        header = _result_rows([_retrieval_evaluated_cell()])[0]
+
+        assert "mrr" in header
+
+    def test_should_render_real_mrr_for_a_color_retrieval_row(self) -> None:
+        row = _result_row(_retrieval_evaluated_cell(mrr=0.9123), retrieval_reported=True)
+
+        assert "0.9123" in row
+
+    def test_should_render_recall_at_k_for_a_color_retrieval_row(self) -> None:
+        row = _result_row(_retrieval_evaluated_cell(recall={5: 0.8, 10: 0.6}), retrieval_reported=True)
+
+        assert "5:0.8000 10:0.6000" in row
+
+    def test_should_render_not_available_retrieval_for_a_skipped_tfidf_row(self) -> None:
+        row = _result_row(_tfidf_skipped_cell(), retrieval_reported=True)
+
+        assert "| n/a | n/a |" in row
+
+    def test_should_render_not_available_recall_when_recall_at_k_is_empty(self) -> None:
+        row = _result_row(_retrieval_evaluated_cell(mrr=0.9, recall={}), retrieval_reported=True)
+
+        assert "| 0.9000 | n/a |" in row
+
+    def test_should_state_tfidf_skip_reason_in_note_when_retrieval_reported(self) -> None:
+        assert "classification-only" in _results_note(True)
+
+    def test_should_state_classification_only_note_when_retrieval_not_reported(self) -> None:
+        assert "measured separately" in _results_note(False)
+
+    def test_should_emit_methods_in_reproduce_command(self) -> None:
+        command = _reproduce_command(EvalSuiteArgs(methods=["color", "hnsw"]))
+
+        assert "--methods color hnsw" in command
+
+    def test_should_emit_task_both_in_reproduce_command_when_retrieval_requested(self) -> None:
+        command = _reproduce_command(EvalSuiteArgs(task="both", k_values=[1, 5]))
+
+        assert "--task both --k-values 1 5" in command
+
+    def test_should_not_emit_task_flag_in_reproduce_command_when_classification_only(self) -> None:
+        command = _reproduce_command(EvalSuiteArgs(task="classification"))
+
+        assert "--task" not in command
+
 
 def _run_main(tmp_path: Path, fidelity: DistanceFidelity, evaluated: List[EvaluatedCell]) -> Path:
     output_path = tmp_path / "eval_results.md"
@@ -266,6 +486,34 @@ class TestEvalSuiteMain:
         output_path = _run_main(tmp_path, _fidelity(is_faithful=True), [_evaluated_cell("ag_news")])
 
         assert "| ag_news | color | sliced |" in output_path.read_text()
+
+    def test_should_pass_a_retrieval_factory_to_the_suite_when_task_is_both(self, tmp_path: Path) -> None:
+        output_path = tmp_path / "eval_results.md"
+        args = EvalSuiteArgs(datasets=["ag_news"], methods=["color"], task="both", output_path=str(output_path))
+        with ExitStack() as stack:
+            config = Mock()
+            config.training.seed = 42
+            stack.enter_context(
+                patch("colors_of_meaning.interface.cli.eval_suite.SynestheticConfig")
+            ).from_yaml.return_value = config
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.SentenceEmbeddingAdapter"))
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.create_color_mapper"))
+            repo_class = stack.enter_context(
+                patch("colors_of_meaning.interface.cli.eval_suite.FileColorCodebookRepository")
+            )
+            repo_class.return_value.load.return_value = Mock()
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")).return_value = (
+                _fidelity(is_faithful=True)
+            )
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._build_evaluate_use_case_factory"))
+            suite_class = stack.enter_context(
+                patch("colors_of_meaning.interface.cli.eval_suite.EvaluationSuiteUseCase")
+            )
+            suite_class.return_value.execute.return_value = [_evaluated_cell("ag_news")]
+            stack.enter_context(patch("builtins.print"))
+            main(args)
+
+        assert suite_class.call_args.kwargs["retrieval_use_case_factory"] is not None
 
     def test_should_propagate_unfaithful_proxy_error_without_writing_report(self, tmp_path: Path) -> None:
         output_path = tmp_path / "eval_results.md"

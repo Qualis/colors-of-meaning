@@ -8,13 +8,29 @@ from colors_of_meaning.application.use_case.evaluation_suite_use_case import (
     EvaluationCell,
     EvaluationSuiteUseCase,
     UnfaithfulProxyError,
+    _cell_log_payload,
 )
 from colors_of_meaning.domain.model.distance_fidelity import DistanceFidelity
 from colors_of_meaning.domain.model.evaluation_result import EvaluationResult
+from colors_of_meaning.domain.model.retrieval_evaluation import RetrievalEvaluation
 
 
 def _evaluation_result() -> EvaluationResult:
     return EvaluationResult(accuracy=0.8, macro_f1=0.78, recall_at_k={}, mrr=0.7)
+
+
+def _retrieval_result(mrr: float = 0.9) -> EvaluationResult:
+    return EvaluationResult(accuracy=0.0, macro_f1=0.0, recall_at_k={5: 0.8}, mrr=mrr)
+
+
+def _retrieval_use_case(result: EvaluationResult) -> Mock:
+    use_case = Mock()
+    use_case.execute.return_value = RetrievalEvaluation(result=result, ndcg_at_k={})
+    return use_case
+
+
+def _retrieval_factory(use_case: Mock) -> Mock:
+    return Mock(return_value=use_case)
 
 
 def _fidelity(is_faithful: bool) -> DistanceFidelity:
@@ -24,14 +40,21 @@ def _fidelity(is_faithful: bool) -> DistanceFidelity:
     )
 
 
-def _cell(distance: str = "sliced", budget: int = 4000, requires_fidelity: bool = True) -> EvaluationCell:
+def _cell(
+    distance: str = "sliced",
+    budget: int = 4000,
+    requires_fidelity: bool = True,
+    method: str = "color",
+    supports_retrieval: bool = False,
+) -> EvaluationCell:
     return EvaluationCell(
         dataset="ag_news",
-        method="color",
+        method=method,
         distance=distance,
         budget=budget,
         requires_fidelity=requires_fidelity,
         bits_per_token=12.0,
+        supports_retrieval=supports_retrieval,
     )
 
 
@@ -134,3 +157,84 @@ class TestEvaluationSuiteUseCase:
         suite.execute([_cell(), _cell(distance="wasserstein", requires_fidelity=False)], _fidelity(True))
 
         assert factory.call_count == 2
+
+    def test_should_leave_retrieval_absent_when_no_retrieval_factory_provided(self) -> None:
+        suite = EvaluationSuiteUseCase(_factory(_evaluate_use_case(_evaluation_result())))
+
+        evaluated = suite.execute([_cell(supports_retrieval=True)], _fidelity(True))
+
+        assert evaluated[0].retrieval is None
+
+    def test_should_merge_real_retrieval_result_when_method_supports_retrieval(self) -> None:
+        suite = EvaluationSuiteUseCase(
+            _factory(_evaluate_use_case(_evaluation_result())),
+            retrieval_use_case_factory=_retrieval_factory(_retrieval_use_case(_retrieval_result(mrr=0.9))),
+        )
+
+        evaluated = suite.execute([_cell(supports_retrieval=True)], _fidelity(True))
+
+        assert evaluated[0].retrieval.mrr == 0.9
+
+    def test_should_keep_classification_result_when_retrieval_is_merged(self) -> None:
+        suite = EvaluationSuiteUseCase(
+            _factory(_evaluate_use_case(_evaluation_result())),
+            retrieval_use_case_factory=_retrieval_factory(_retrieval_use_case(_retrieval_result())),
+        )
+
+        evaluated = suite.execute([_cell(supports_retrieval=True)], _fidelity(True))
+
+        assert evaluated[0].result.accuracy == 0.8
+
+    def test_should_record_skip_reason_when_method_does_not_support_retrieval(self) -> None:
+        suite = EvaluationSuiteUseCase(
+            _factory(_evaluate_use_case(_evaluation_result())),
+            retrieval_use_case_factory=_retrieval_factory(_retrieval_use_case(_retrieval_result())),
+        )
+
+        evaluated = suite.execute([_cell(method="tfidf", supports_retrieval=False)], _fidelity(True))
+
+        assert "classification-only" in evaluated[0].retrieval_skip_reason
+
+    def test_should_still_report_classification_when_retrieval_skipped_for_tfidf(self) -> None:
+        suite = EvaluationSuiteUseCase(
+            _factory(_evaluate_use_case(_evaluation_result())),
+            retrieval_use_case_factory=_retrieval_factory(_retrieval_use_case(_retrieval_result())),
+        )
+
+        evaluated = suite.execute([_cell(method="tfidf", supports_retrieval=False)], _fidelity(True))
+
+        assert evaluated[0].retrieval is None
+
+    def test_should_forward_cell_budget_to_retrieval_use_case(self) -> None:
+        retrieval_use_case = _retrieval_use_case(_retrieval_result())
+        suite = EvaluationSuiteUseCase(
+            _factory(_evaluate_use_case(_evaluation_result())),
+            retrieval_use_case_factory=_retrieval_factory(retrieval_use_case),
+        )
+
+        suite.execute([_cell(budget=4000, supports_retrieval=True)], _fidelity(True))
+
+        assert retrieval_use_case.execute.call_args[1]["max_samples"] == 4000
+
+
+class TestCellLogPayload:
+    def test_should_include_bits_per_token_in_log_payload(self) -> None:
+        payload = _cell_log_payload(EvaluatedCell(cell=_cell(), result=_evaluation_result(), seconds=1.0))
+
+        assert payload["bits_per_token"] == 12.0
+
+    def test_should_include_mrr_in_log_payload_when_retrieval_present(self) -> None:
+        payload = _cell_log_payload(
+            EvaluatedCell(cell=_cell(), result=_evaluation_result(), seconds=1.0, retrieval=_retrieval_result(mrr=0.9))
+        )
+
+        assert payload["mrr"] == 0.9
+
+    def test_should_include_skip_reason_in_log_payload_when_retrieval_skipped(self) -> None:
+        payload = _cell_log_payload(
+            EvaluatedCell(
+                cell=_cell(), result=_evaluation_result(), seconds=1.0, retrieval_skip_reason="skipped for tfidf"
+            )
+        )
+
+        assert payload["retrieval_skip_reason"] == "skipped for tfidf"
