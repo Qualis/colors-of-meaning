@@ -13,10 +13,12 @@
 *distribution of colours*, keeping enough structure to retrieve, classify, interpret, and
 even losslessly store meaning.** What this repository demonstrates, end to end:
 
-- **Extreme yet useful compression.** ~1024:1 (12,288 → 12 bits/sentence). On AG News the
-  colour method retrieves at **81.8%** accuracy at the 4,000-document scale (TF-IDF/HNSW
-  baselines ~90–92%); the cost of compression is quantified on a measured **rate–distortion
-  frontier** against gzip and Product Quantization.
+- **Extreme yet useful compression.** ~1024:1 (12,288 → 12 bits/sentence). On AG News at the
+  4,000-sample scale the colour method **classifies at 81.8%** and **retrieves same-class
+  documents at MRR 0.85 / recall@5 0.94** — ranked by the same perceptual Wasserstein distance,
+  a *measured* retrieval metric, not a relabelled accuracy — against matched-budget TF-IDF /
+  HNSW at **86.3% / 88.9%**; the cost of compression is further quantified on a measured
+  **rate–distortion frontier** against gzip and Product Quantization.
 - **Real prose, not just benchmarks.** A 22-author / 133-work Project Gutenberg corpus is a
   first-class dataset source (author = label, leakage-free work-level train/validation/test
   split). A colour projector trained and *validation-selected* on it reaches **10.8%**
@@ -26,7 +28,7 @@ even losslessly store meaning.** What this repository demonstrates, end to end:
   neighbourhoods, per-author signatures, and an **A4 colours-of-meaning sheet per book**
   (Darwin's science prose is visibly cyan vs the fiction's dark blue/purple).
 - **Documents you can store losslessly.** The same texts also encode to printable **A4
-  colour-barcode pages that decode back byte-for-byte** — all 73 books verified, 0 round-trip
+  colour-barcode pages that decode back byte-for-byte** — all 133 works verified, 0 round-trip
   failures.
 - **Interpretable & validated.** Structured-mapper axes (hue↔topic, lightness↔sentiment,
   chroma↔concreteness) pass a falsifiable held-out test against a negative control.
@@ -52,7 +54,7 @@ Authors cluster by colour, and every book becomes an A4 colour signature (one ce
 
 ![t-SNE of document colour distributions, coloured by author](reports/figures/documents_color_tsne.png)
 
-![Contact sheet of the A4 colour signature for each of the 73 books](reports/figures/documents_a4_gallery.png)
+![Contact sheet of the A4 colour signature for each of the 133 works](reports/figures/documents_a4_gallery.png)
 
 And losslessly — the *exact* bytes: an entire book stored as a single A4 colour-barcode that
 decodes back **byte-for-byte**. This is the real artifact, not a mock-up — download it and run
@@ -140,30 +142,44 @@ The core idea is to map semantic embeddings into perceptual color space (CIE Lab
 
 ### Current Performance (AG News Dataset)
 
-| Method | Accuracy | Macro F1 | Notes |
-|--------|----------|----------|-------|
-| TF-IDF Baseline | 90.63% | 90.61% | Full test set, traditional bag-of-words |
-| HNSW Baseline | 91.99% | 91.97% | Full test set, semantic embeddings + k-NN |
-| Color Method | 81.25% | 81.22% | Supervised mapper, [`configs/agnews_run.yaml`](configs/agnews_run.yaml) — see below |
+A **matched** three-way comparison — colour, TF-IDF, and HNSW all at the same
+**4,000-sample** AG News budget and seed 42, from the committed, fidelity-gated
+[`reports/eval_results.md`](reports/eval_results.md) (sliced-Wasserstein proxy):
 
-The headline Color Method figure above is a **400-sample** AG News budget (exact
-Earth-Mover re-rank). For the **scaled, multi-dataset** numbers — AG News at a large
-budget plus **IMDB** and **20 Newsgroups** — produced with a fidelity-gated fast
-distance, see [Scaled, multi-dataset evaluation](#scaled-multi-dataset-evaluation) and
-the committed [`reports/eval_results.md`](reports/eval_results.md).
+| Method | Budget | Accuracy | Macro F1 | Bits/token |
+|--------|--------|----------|----------|------------|
+| TF-IDF | 4,000 | 86.30% | 86.24% | — |
+| HNSW | 4,000 | 88.90% | 88.90% | 12,288 |
+| Color | 4,000 | 81.75% | 81.78% | 12 |
 
-The TF-IDF and HNSW rows are the published full-test-set baselines. The **Color
-Method** figure is produced end-to-end on AG News by a committed run configuration
-([`configs/agnews_run.yaml`](configs/agnews_run.yaml)): the supervised color mapper,
-seed 42, CPU, and `max_samples: 400` (100 documents per class). At ~1024:1
-compression (12 bits/token over a 4,096-color palette) it lands within ~1 point of
-TF-IDF and ~4 points of HNSW *at the same sample budget*. For the apples-to-apples
-matched-budget comparison and the exact commands that regenerate the number, see
+At ~1024:1 compression (12 bits/token over a 4,096-colour palette) the colour method
+trails TF-IDF by ~4.5 points and HNSW by ~7 points **at the same sample budget** — the
+honest, matched cost of the squeeze, not a full-test-set-vs-400-sample mismatch. (For
+reference only: the *published* full-test-set baselines are TF-IDF 90.63% / HNSW 91.99%
+— a larger, different budget, not comparable to the colour row above.)
+
+**Retrieval, measured.** Ranked by the same perceptual Wasserstein distance the
+classifier uses, colour retrieval scores **MRR 0.85** with **recall@5 0.94** on this
+budget (HNSW **0.90 / 0.97**; TF-IDF is classification-only). These are real label-based
+retrieval metrics — a same-class document surfacing near the query — not a relabelled
+classification number.
+
+**Does structure survive the squeeze?** The single most direct measure is the
+structure-preservation Spearman correlation between embedding-space cosine similarity and
+colour-space distance: **ρ = −0.3904**. It is negative *by design* — closer meanings map to
+closer colours, so higher similarity pairs with smaller distance, and −1 would be perfect
+preservation — so **|ρ| ≈ 0.39 is weak-to-moderate** neighbourhood preservation: real
+semantic structure survives the 12-bit colour, but a meaningful share is lost. It is printed
+by `train` (see [Reproducing the Color Method Result](#reproducing-the-color-method-result)).
+
+For the **scaled, multi-dataset** numbers — AG News at this budget plus **IMDB** and **20
+Newsgroups** — see [Scaled, multi-dataset evaluation](#scaled-multi-dataset-evaluation); for the
+400-sample exact-EMD headline and the exact commands that regenerate it, see
 [Reproducing the Color Method Result](#reproducing-the-color-method-result).
 
 ### Reproducing the Color Method Result
 
-The Color Method row is generated by the committed run configuration
+The 400-sample Color Method headline (**81.25%** / 81.22%, exact Earth-Mover re-rank) is generated by the committed run configuration
 [`configs/agnews_run.yaml`](configs/agnews_run.yaml), which pins `training.seed: 42`,
 `training.device: cpu`, `dataset.max_samples: 400`, the 4,096-color codebook, and
 exact perceptual Lab Earth-Mover distance (`distance.sinkhorn_reg: null`):
@@ -183,7 +199,7 @@ Step 1 prints `Structure-preservation correlation: -0.3904` — the Spearman ran
 correlation between embedding-space cosine similarity and color-space distance
 ([P0-5](.specs/005-p0-5-determinism-structure-metric/SPEC.md)). It is negative by
 design: closer meanings map to closer colors, so higher similarity pairs with smaller
-color distance. Step 3 prints the Accuracy / Macro-F1 recorded in the table above.
+color distance. Step 3 prints that 400-sample Accuracy / Macro-F1 (**81.25%** / 81.22%) — the matched-budget comparison below.
 
 **Artifacts** (regenerated locally; kept out of version control by `.gitignore`):
 
@@ -191,8 +207,9 @@ color distance. Step 3 prints the Accuracy / Macro-F1 recorded in the table abov
 - `artifacts/codebooks/codebook_4096.pkl` — 4,096-color Lab codebook
 - `artifacts/encoded/test_documents.pkl` — persisted color histograms (step 2)
 
-**Matched-budget comparison** — all three methods at `max_samples: 400`, seed 42, a
-fair head-to-head (unlike the published full-test-set baselines above):
+**Matched-budget comparison at 400 samples** — the exact-EMD headline run: all three methods
+at `max_samples: 400`, seed 42, a fair head-to-head (a smaller budget than the 4,000-sample
+matched table above, but with an exact Earth-Mover re-rank rather than the sliced proxy):
 
 | Method | Accuracy | Macro F1 |
 |--------|----------|----------|

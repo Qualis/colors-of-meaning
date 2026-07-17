@@ -25,7 +25,7 @@ The system follows Hexagonal Architecture (Ports and Adapters) with Domain-Drive
 ### Infrastructure Layer
 - **SentenceEmbeddingAdapter**: Wraps sentence-transformers for text embeddings
 - **PyTorchColorMapper**: Neural network projector (384→128→64→3) mapping embeddings to Lab
-- **WassersteinDistanceCalculator**: Computes Wasserstein-2 distance on histograms
+- **WassersteinDistanceCalculator**: Computes Wasserstein-1 (Earth Mover's) distance on histograms — a Euclidean Lab ground cost via `ot.emd2` with no final square root (squaring the ground cost and taking a final root would instead give the order-2 variant)
 - **JensenShannonDistanceCalculator**: Computes Jensen-Shannon divergence
 - **FileColorCodebookRepository**: Persistence layer for codebooks
 
@@ -80,14 +80,14 @@ The system follows Hexagonal Architecture (Ports and Adapters) with Domain-Drive
 
 ## Current Limitations
 
-- Training uses random targets (unsupervised) - could benefit from task-specific supervision
+- Training distils embedding-space similarity structure into colour-space distances (a structure-preserving objective replacing the earlier random-target MSE), with an optional supervised joint projection + classification variant; the 384→3-dim projection is still lossy, so fine semantic distinctions can collapse into nearby colours
 - Sentence splitting is simplistic (needs proper NLP tokenization)
 - No online learning or incremental updates
 - Limited to English text via sentence-transformers
 
 ## Future Work
 
-- Interpretable mapping with semantic axes (hue=topic, lightness=sentiment, saturation=concreteness)
+- Strengthen the interpretable semantic axes (hue↔topic, lightness↔sentiment, chroma↔concreteness): the structured mapper already implements them and a falsifiable held-out test validates them **weakly** against a negative control (sentiment is off by default), so making all three hold strongly and simultaneously remains open work
 - Multi-modal extension (images, audio)
 - Hierarchical color spaces for variable-resolution encoding
 - Integration with vector databases for large-scale retrieval
