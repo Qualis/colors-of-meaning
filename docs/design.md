@@ -63,7 +63,7 @@ The system follows Hexagonal Architecture (Ports and Adapters) with Domain-Drive
 
 ### Baselines
 - TF-IDF + Logistic Regression
-- Sentence Embeddings + Product Quantization (FAISS)
+- Sentence Embeddings + HNSW k-NN (hnswlib — FAISS-free, ARM64-safe)
 
 ### Metrics
 - Classification: Accuracy, Macro-F1
@@ -87,7 +87,7 @@ The system follows Hexagonal Architecture (Ports and Adapters) with Domain-Drive
 
 ## Future Work
 
-- Strengthen the interpretable semantic axes (hue↔topic, lightness↔sentiment, chroma↔concreteness): the structured mapper already implements them and a falsifiable held-out test validates them **weakly** against a negative control (sentiment is off by default), so making all three hold strongly and simultaneously remains open work
+- Strengthen the interpretable semantic axes (hue↔topic, lightness↔sentiment, chroma↔concreteness): the structured mapper implements them and a falsifiable held-out test clears a negative control on all three, but with modest absolute effect sizes (hue NMI ≈ 0.13, chroma ≈ 0.33; lightness↔sentiment ≈ 0.57, and only when its opt-in sentiment head is enabled), so making all three hold strongly and simultaneously remains open work
 - Multi-modal extension (images, audio)
 - Hierarchical color spaces for variable-resolution encoding
 - Integration with vector databases for large-scale retrieval

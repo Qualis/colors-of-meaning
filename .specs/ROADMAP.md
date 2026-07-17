@@ -1,7 +1,7 @@
 # Colors of Meaning — Remediation & Delivery Roadmap
 
-**Last updated:** 2026-06-20
-**Status:** Proposed
+**Last updated:** 2026-07-17
+**Status:** Delivered — P0–P2 complete (specs 001–016); 11 extensions shipped (017–027); only the §7 research extensions remain
 **Scope:** Sequence the changes needed to turn the repository into a valid empirical test of the [Colors of Meaning](https://www.qual.is/posts/colors-of-meaning) thesis, then extend it.
 
 ---
@@ -18,6 +18,17 @@ The blog post is conceptual and reports **no** empirical results — it explicit
 | 4 | Reported result | `Color Method = TBD`; no trained artifacts exist | `README.MD:33` |
 
 This roadmap fixes the chain end-to-end (P0), then addresses the blog's secondary claims (P1) and engineering/honesty debt (P2).
+
+> **Delivery status (2026-07-17).** §1 — the table above and its diagnosis — describes the **pre-remediation baseline** that motivated this roadmap; every mechanism it flags has since been fixed. **P0–P2 are complete**, each milestone mapped to a committed spec:
+>
+> | Milestone | Specs | Status |
+> |---|---|---|
+> | P0-1…P0-6 — real, correct experiment | `001`–`006` | ✅ |
+> | P1-1…P1-4 — secondary claims | `007`–`010` | ✅ |
+> | P2-1…P2-6 — engineering & honesty | `011`–`016` | ✅ |
+> | Beyond the roadmap | `017`–`027` (A4 image, lossless codec, scaled/matched-budget eval, falsifiable interpretability, rate–distortion frontier, authored corpus, narrative compass, book generation, real retrieval metrics, claims reconciliation) | ✅ |
+>
+> The only un-started items are the **§7 research extensions** (R-1 other modalities · R-2 learned/unconstrained target space · R-3 cross-system consistency).
 
 ---
 

@@ -28,8 +28,9 @@ even losslessly store meaning.** What this repository demonstrates, end to end:
   neighbourhoods, per-author signatures, and an **A4 colours-of-meaning sheet per book**
   (Darwin's science prose is visibly cyan vs the fiction's dark blue/purple).
 - **Documents you can store losslessly.** The same texts also encode to printable **A4
-  colour-barcode pages that decode back byte-for-byte** — all 133 works verified, 0 round-trip
-  failures.
+  colour-barcode pages that decode back byte-for-byte** — all 133 works round-trip with 0
+  failures in a local run; the CI-reproducible proof is the committed *A Christmas Carol* page
+  and the codec's round-trip test suite (the barcodes are git-ignored, regenerable artifacts).
 - **Interpretable & validated.** Structured-mapper axes (hue↔topic, lightness↔sentiment,
   chroma↔concreteness) pass a falsifiable held-out test against a negative control.
 
