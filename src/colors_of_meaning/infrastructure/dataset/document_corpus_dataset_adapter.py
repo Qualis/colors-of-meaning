@@ -7,6 +7,7 @@ from colors_of_meaning.domain.model.evaluation_sample import EvaluationSample
 from colors_of_meaning.domain.repository.dataset_repository import DatasetRepository
 from colors_of_meaning.infrastructure.dataset.seeded_sampler import seeded_subsample
 from colors_of_meaning.shared.document_corpus import (
+    discover_author_works,
     extract_paragraphs,
     parse_author_work,
     strip_gutenberg_boilerplate,
@@ -18,6 +19,7 @@ DEFAULT_MIN_PARAGRAPH_CHARS = 200
 DEFAULT_PARAGRAPHS_PER_WORK = 60
 DEFAULT_VALIDATION_FRACTION = 0.2
 DEFAULT_TEST_FRACTION = 0.2
+DEFAULT_SAMPLE_SEED = 42
 WORK_SPLIT_STRATEGY = "work"
 MINIMUM_WORKS_FOR_WORK_SPLIT = 3
 MINIMUM_PARAGRAPHS_FOR_SPLIT = 3
@@ -45,6 +47,7 @@ class DocumentCorpusDatasetAdapter(DatasetRepository):
             test_fraction,
         )
         self._label_names = [author for author, _works, _train, _val, _test in qualifying]
+        self._authors_works = [(author, works) for author, works, _train, _val, _test in qualifying]
         self._samples_by_split = _assemble_samples(qualifying)
         _log_discovery(qualifying, split_strategy)
 
@@ -54,13 +57,17 @@ class DocumentCorpusDatasetAdapter(DatasetRepository):
         max_samples: Optional[int] = None,
         seed: Optional[int] = None,
     ) -> List[EvaluationSample]:
-        return seeded_subsample(self._samples_by_split.get(split, []), max_samples, seed)
+        resolved_seed = seed if seed is not None else DEFAULT_SAMPLE_SEED
+        return seeded_subsample(self._samples_by_split.get(split, []), max_samples, resolved_seed)
 
     def get_label_names(self) -> List[str]:
         return list(self._label_names)
 
     def get_num_classes(self) -> int:
         return len(self._label_names)
+
+    def works_per_author(self) -> List[Tuple[str, int]]:
+        return list(self._authors_works)
 
 
 def _scan_qualifying_authors(
@@ -99,9 +106,7 @@ def _deduplicate(paragraphs: List[str], seen: Set[str]) -> List[str]:
 
 
 def _discover_works(root: Path) -> List[Path]:
-    if not root.is_dir():
-        return []
-    return sorted(root.glob("*/*.txt"), key=lambda path: (path.parent.name, path.name))
+    return discover_author_works(root)
 
 
 def _read_work_paragraphs(work_path: Path, min_chars: int, cap: int) -> List[str]:

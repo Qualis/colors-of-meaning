@@ -29,6 +29,9 @@ class TestFigureRenderer:
     def test_should_define_render_narrative_arc_method(self) -> None:
         assert hasattr(FigureRenderer, "render_narrative_arc")
 
+    def test_should_define_render_a4_gallery_method(self) -> None:
+        assert hasattr(FigureRenderer, "render_a4_gallery")
+
     def test_should_allow_concrete_implementation(self) -> None:
         class ConcreteFigureRenderer(FigureRenderer):
             def render_codebook_palette(self, codebook, output_path):  # type: ignore
@@ -50,6 +53,9 @@ class TestFigureRenderer:
                 pass
 
             def render_narrative_arc(self, arc, output_path):  # type: ignore
+                pass
+
+            def render_a4_gallery(self, sheet_paths, output_path, columns=12):  # type: ignore
                 pass
 
         renderer = ConcreteFigureRenderer()

@@ -201,6 +201,26 @@ class TestSampling:
 
         assert len(_texts_with_prefix(_all_samples(adapter), "alpha")) == 6
 
+    def test_should_order_the_full_split_deterministically_without_a_seed(self, tmp_path: Path) -> None:
+        self._two_author_corpus(tmp_path)
+
+        adapter = DocumentCorpusDatasetAdapter(str(tmp_path), min_paragraph_chars=5)
+
+        first = [sample.text for sample in adapter.get_samples("train")]
+        second = [sample.text for sample in adapter.get_samples("train")]
+        assert first == second
+
+
+class TestWorksPerAuthor:
+    def test_should_report_the_work_count_for_each_qualifying_author(self, tmp_path: Path) -> None:
+        _write(tmp_path, "alpha", "w1", _paragraphs("alpha", 6))
+        _write(tmp_path, "beta", "w1", _paragraphs("beta", 6))
+        _write(tmp_path, "beta", "w2", _paragraphs("beta_two", 6))
+
+        adapter = DocumentCorpusDatasetAdapter(str(tmp_path), min_paragraph_chars=5)
+
+        assert adapter.works_per_author() == [("alpha", 1), ("beta", 2)]
+
 
 class TestSkipping:
     def test_should_ignore_non_txt_files(self, tmp_path: Path) -> None:

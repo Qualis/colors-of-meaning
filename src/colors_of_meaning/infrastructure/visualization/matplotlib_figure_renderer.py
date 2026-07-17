@@ -1,6 +1,6 @@
 import math
 import os
-from typing import Any, List
+from typing import Any, List, Optional
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -25,6 +25,8 @@ matplotlib.use("Agg")
 FIGURE_DPI = 150
 RATE_DISTORTION_FIGURE_SIZE = (11.0, 7.0)
 NARRATIVE_ARC_FIGURE_SIZE = (11.0, 9.0)
+GALLERY_TILE_WIDTH_INCHES = 1.3
+GALLERY_TILE_HEIGHT_INCHES = 1.84
 
 
 class MatplotlibFigureRenderer(FigureRenderer):
@@ -208,6 +210,31 @@ class MatplotlibFigureRenderer(FigureRenderer):
         distortion_axis.set_title("Rate-distortion frontier for semantic color compression")
         self._merge_legends(distortion_axis, accuracy_axis)
         self._save_figure(fig, output_path, tight=False)
+
+    def render_a4_gallery(self, sheet_paths: List[str], output_path: str, columns: int = 12) -> None:
+        if not sheet_paths:
+            raise ValueError("render_a4_gallery requires at least one sheet path")
+
+        column_count = min(columns, len(sheet_paths))
+        row_count = int(math.ceil(len(sheet_paths) / column_count))
+        fig, axes = plt.subplots(
+            row_count,
+            column_count,
+            figsize=(column_count * GALLERY_TILE_WIDTH_INCHES, row_count * GALLERY_TILE_HEIGHT_INCHES),
+        )
+        flat_axes = np.atleast_1d(axes).ravel()
+
+        for position, axis in enumerate(flat_axes):
+            self._draw_gallery_tile(axis, sheet_paths[position] if position < len(sheet_paths) else None)
+
+        fig.suptitle("Per-book A4 colour signatures")
+        self._save_figure(fig, output_path)
+
+    @staticmethod
+    def _draw_gallery_tile(axis: Any, sheet_path: Optional[str]) -> None:
+        axis.axis("off")
+        if sheet_path is not None:
+            axis.imshow(plt.imread(sheet_path), interpolation="nearest")
 
     def render_narrative_arc(self, arc: NarrativeArc, output_path: str) -> None:
         fig, axes = plt.subplots(5, 1, figsize=NARRATIVE_ARC_FIGURE_SIZE)

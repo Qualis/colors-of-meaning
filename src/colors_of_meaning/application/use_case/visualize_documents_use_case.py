@@ -47,3 +47,6 @@ class VisualizeDocumentsUseCase:
         top_colors: int = 24,
     ) -> None:
         self.figure_renderer.render_corpus_signatures(documents, labels, label_names, codebook, output_path, top_colors)
+
+    def execute_a4_gallery(self, sheet_paths: List[str], output_path: str, columns: int = 12) -> None:
+        self.figure_renderer.render_a4_gallery(sheet_paths, output_path, columns)

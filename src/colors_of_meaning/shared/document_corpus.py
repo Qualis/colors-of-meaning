@@ -21,3 +21,9 @@ def extract_paragraphs(text: str, min_chars: int) -> List[str]:
 
 def parse_author_work(path: Path) -> Tuple[str, str]:
     return path.parent.name, path.stem
+
+
+def discover_author_works(root: Path) -> List[Path]:
+    if not root.is_dir():
+        return []
+    return sorted(root.glob("*/*.txt"), key=lambda path: (path.parent.name, path.name))

@@ -26,7 +26,9 @@ This roadmap fixes the chain end-to-end (P0), then addresses the blog's secondar
 > | P0-1…P0-6 — real, correct experiment | `001`–`006` | ✅ |
 > | P1-1…P1-4 — secondary claims | `007`–`010` | ✅ |
 > | P2-1…P2-6 — engineering & honesty | `011`–`016` | ✅ |
-> | Beyond the roadmap | `017`–`027` (A4 image, lossless codec, scaled/matched-budget eval, falsifiable interpretability, rate–distortion frontier, authored corpus, narrative compass, book generation, real retrieval metrics, claims reconciliation) | ✅ |
+> | Beyond the roadmap | `017`–`028` (A4 image, lossless codec, scaled/matched-budget eval, falsifiable interpretability, rate–distortion frontier, authored corpus, narrative compass, book generation, real retrieval metrics, claims reconciliation, reproducible authorship report & figures) | ✅ |
+>
+> `028` closes the last "committed artifact with no committed generator" gap: `tox -e visualize_documents` regenerates the authored-corpus figures (t-SNE, per-author signatures, 133 A4 sheets, A4 gallery) deterministically, and `tox -e authorship` writes `reports/documents_authorship.md`'s computed tables from a real held-out train/eval (data-scaling table cached in the committed `reports/data/authorship_scaling.json`; `--refresh-scaling` re-runs the sweep). Book generation (`reports/book/*`) stays on `tox -e generate` and is inherently non-reproducible (live key, non-deterministic LLM, no seed) — no new environment is warranted for it.
 >
 > The only un-started items are the **§7 research extensions** (R-1 other modalities · R-2 learned/unconstrained target space · R-3 cross-system consistency).
 

@@ -85,6 +85,8 @@ reports/figures/*
 !reports/figures/lossless_a_christmas_carol.png
 !reports/figures/story_compass.png
 !reports/figures/a4/
+!reports/data/
+!reports/data/authorship_scaling.json
 
 # Training data (sample data is tracked separately)
 data/train.txt

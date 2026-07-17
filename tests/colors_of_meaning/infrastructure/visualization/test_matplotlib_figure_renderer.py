@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
 import numpy as np
+import pytest
 
 from PIL import Image
 
@@ -816,6 +817,52 @@ class TestRenderNarrativeArc:
         MatplotlibFigureRenderer().render_narrative_arc(_narrative_arc(), output_path)
 
         mock_fig.savefig.assert_called_once_with(output_path, dpi=150)
+
+
+def _write_sheet(directory: Path, name: str, shade: int) -> str:
+    path = directory / name
+    Image.new("RGB", (20, 28), (shade, shade, shade)).save(path, format="PNG")
+    return str(path)
+
+
+def _sheet_paths(directory: Path, count: int) -> list:
+    return [_write_sheet(directory, f"sheet_{index}.png", 10 * index) for index in range(count)]
+
+
+class TestRenderA4Gallery:
+    def test_should_write_a_non_empty_gallery_png(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        output_path = str(tmp_path / "gallery.png")
+
+        renderer.render_a4_gallery(_sheet_paths(tmp_path, 5), output_path, columns=3)
+
+        assert os.path.getsize(output_path) > 0
+
+    def test_should_raise_when_no_sheet_paths_are_provided(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+
+        with pytest.raises(ValueError, match="at least one sheet"):
+            renderer.render_a4_gallery([], str(tmp_path / "gallery.png"))
+
+    def test_should_render_identical_bytes_across_runs(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        sheets = _sheet_paths(tmp_path, 4)
+        first = str(tmp_path / "first.png")
+        second = str(tmp_path / "second.png")
+
+        renderer.render_a4_gallery(sheets, first, columns=2)
+        renderer.render_a4_gallery(sheets, second, columns=2)
+
+        assert (tmp_path / "first.png").read_bytes() == (tmp_path / "second.png").read_bytes()
+
+    @patch(f"{MODULE}.plt")
+    def test_should_clamp_columns_to_the_sheet_count(self, mock_plt: Mock, tmp_path: Path) -> None:
+        mock_plt.subplots.return_value = (Mock(), np.array([Mock(), Mock()]))
+        mock_plt.imread.return_value = np.zeros((2, 2, 3))
+
+        MatplotlibFigureRenderer().render_a4_gallery(["a.png", "b.png"], str(tmp_path / "g.png"), columns=12)
+
+        assert mock_plt.subplots.call_args.args == (1, 2)
 
 
 class TestSaveFigure:

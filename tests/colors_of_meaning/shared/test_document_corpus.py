@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from colors_of_meaning.shared.document_corpus import (
+    discover_author_works,
     extract_paragraphs,
     parse_author_work,
     strip_gutenberg_boilerplate,
@@ -47,3 +48,26 @@ class TestParseAuthorWork:
 
     def test_should_read_the_work_from_the_filename_stem(self) -> None:
         assert parse_author_work(Path("documents/austen/pride.txt"))[1] == "pride"
+
+
+def _write(root: Path, author: str, work: str) -> None:
+    (root / author).mkdir(parents=True, exist_ok=True)
+    (root / author / f"{work}.txt").write_text("body", encoding="utf-8")
+
+
+class TestDiscoverAuthorWorks:
+    def test_should_return_works_ordered_by_author_then_work(self, tmp_path: Path) -> None:
+        _write(tmp_path, "carroll", "alice")
+        _write(tmp_path, "austen", "persuasion")
+        _write(tmp_path, "austen", "emma")
+
+        works = discover_author_works(tmp_path)
+
+        assert [parse_author_work(path) for path in works] == [
+            ("austen", "emma"),
+            ("austen", "persuasion"),
+            ("carroll", "alice"),
+        ]
+
+    def test_should_return_empty_when_root_is_not_a_directory(self, tmp_path: Path) -> None:
+        assert discover_author_works(tmp_path / "missing") == []

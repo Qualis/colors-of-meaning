@@ -93,3 +93,22 @@ class TestVisualizeDocumentsUseCaseCorpusSignatures:
         mock_renderer.render_corpus_signatures.assert_called_once_with(
             documents, labels, label_names, mock_codebook, "/output/signatures.png", 8
         )
+
+
+class TestVisualizeDocumentsUseCaseA4Gallery:
+    def test_should_delegate_gallery_rendering_to_figure_renderer(self) -> None:
+        mock_renderer = Mock()
+        sheet_paths = ["/a4/austen__emma.png", "/a4/carroll__alice.png"]
+
+        use_case = VisualizeDocumentsUseCase(mock_renderer)
+        use_case.execute_a4_gallery(sheet_paths, "/output/gallery.png", columns=6)
+
+        mock_renderer.render_a4_gallery.assert_called_once_with(sheet_paths, "/output/gallery.png", 6)
+
+    def test_should_default_gallery_columns(self) -> None:
+        mock_renderer = Mock()
+
+        use_case = VisualizeDocumentsUseCase(mock_renderer)
+        use_case.execute_a4_gallery(["/a4/austen__emma.png"], "/output/gallery.png")
+
+        mock_renderer.render_a4_gallery.assert_called_once_with(["/a4/austen__emma.png"], "/output/gallery.png", 12)

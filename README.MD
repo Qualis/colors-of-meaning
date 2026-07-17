@@ -463,6 +463,38 @@ for future projector model-selection — pick the checkpoint on validation, repo
 Because `./documents/` is git-ignored, a documents-sourced frontier is a local, opt-in run and is
 not regenerated in CI; the committed AG News frontier above remains the reproducible one.
 
+### Authorship report and figures
+
+The authored-corpus authorship artifacts — [`reports/documents_authorship.md`](reports/documents_authorship.md)
+and its committed figures (`documents_color_tsne.png`, `documents_color_signatures.png`, the 133
+per-book `reports/figures/a4/<author>__<work>.png` sheets, and the `documents_a4_gallery.png` contact
+sheet) — regenerate from committed commands, like every other report. The figures are deterministic
+(byte-identical across runs) and read each book's colour through the trained documents projector:
+
+```bash
+tox -e visualize_documents -- --config configs/documents.yaml \
+  --model-path artifacts/models/projector_documents_valsel.pth --codebook-name codebook_documents_valsel
+```
+
+The report writes its computed tables (corpus authors/works, per-split paragraph counts, held-out
+colour vs TF-IDF results) from a real held-out train/eval, mirroring how `eval_suite` writes
+`eval_results.md`; the narrative prose is a fixed template. The multi-seed data-scaling table is read
+from the committed [`reports/data/authorship_scaling.json`](reports/data/authorship_scaling.json)
+manifest by default, so the report regenerates fast without re-training; `--refresh-scaling` re-runs
+the long, non-CI 8-seed × 3-cap training sweep and rewrites the manifest:
+
+```bash
+tox -e authorship -- --config configs/documents.yaml \
+  --model-path artifacts/models/projector_documents_valsel.pth --codebook-name codebook_documents_valsel \
+  --mapper-type supervised --paragraphs-per-work 60
+```
+
+Because `./documents/` is git-ignored, these are local, opt-in runs not regenerated in CI. Book
+generation (`reports/book/*`) is the one authored artifact with **no** reproducible command: it is
+owned by `tox -e generate`, needs a live API key, and the LLM is non-deterministic (no seed), so
+byte-for-byte reproduction is impossible by construction and no new environment is warranted for it —
+see [Generate a book](#generate-a-book).
+
 ### Narrative Compass
 
 The network is a lossy encoder — it maps a 384-dim embedding to a colour and never runs in reverse,
@@ -850,6 +882,8 @@ vagrant ssh
 | `tox -e eval -- [args]` | Evaluate classification performance |
 | `tox -e visualize -- [args]` | Generate visualizations |
 | `tox -e visualize_corpus -- [args]` | Compare labelled text corpora by color (signatures + t-SNE) |
+| `tox -e visualize_documents -- [args]` | Regenerate the authored-corpus figures (t-SNE, per-author signatures, per-book A4 sheets, A4 gallery) |
+| `tox -e authorship -- [args]` | Write `reports/documents_authorship.md` computed tables from a held-out authored-corpus train/eval (`--refresh-scaling` re-runs the sweep) |
 | `tox -e compass -- [args]` | Read a story outline as a colour trajectory (arc, drift, coherence) |
 | `tox -e query -- [args]` | Query documents by color palette |
 

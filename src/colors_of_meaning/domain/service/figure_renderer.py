@@ -62,3 +62,7 @@ class FigureRenderer(ABC):
     @abstractmethod
     def render_narrative_arc(self, arc: NarrativeArc, output_path: str) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def render_a4_gallery(self, sheet_paths: List[str], output_path: str, columns: int = 12) -> None:
+        raise NotImplementedError

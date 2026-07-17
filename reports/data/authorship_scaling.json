@@ -1,0 +1,22 @@
+{
+  "points": [
+    {
+      "paragraphs_per_work": 60,
+      "train_paragraphs": 5340,
+      "mean_accuracy": 0.092,
+      "std_accuracy": 0.016
+    },
+    {
+      "paragraphs_per_work": 150,
+      "train_paragraphs": 13339,
+      "mean_accuracy": 0.128,
+      "std_accuracy": 0.022
+    },
+    {
+      "paragraphs_per_work": 300,
+      "train_paragraphs": 25452,
+      "mean_accuracy": 0.149,
+      "std_accuracy": 0.023
+    }
+  ]
+}
