@@ -2,7 +2,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Literal, Optional, Tuple
 
 import tyro
 
@@ -18,6 +18,9 @@ from colors_of_meaning.application.use_case.visualize_documents_use_case import 
 from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
 from colors_of_meaning.domain.service.color_mapper import QuantizedColorMapper
+from colors_of_meaning.infrastructure.dataset.document_corpus_dataset_adapter import (
+    DocumentCorpusDatasetAdapter,
+)
 from colors_of_meaning.infrastructure.embedding.sentence_embedding_adapter import (
     SentenceEmbeddingAdapter,
 )
@@ -50,6 +53,12 @@ class VisualizeDocumentsArgs:
     mapper_type: str = "supervised"
     documents_dir: str = "./documents"
     min_paragraph_chars: int = 200
+    paragraphs_per_work: Optional[int] = None
+    split_strategy: Literal["work", "paragraph"] = "work"
+    validation_fraction: float = 0.2
+    test_fraction: float = 0.2
+    figure_split: str = "train"
+    max_figure_samples: Optional[int] = 2000
     leading_paragraphs: int = 40
     output_dir: str = "reports/figures"
     dpi: int = 150
@@ -61,7 +70,6 @@ class VisualizeDocumentsArgs:
 class BookColour:
     author: str
     work: str
-    document: ColoredDocument
     sheet_path: str
 
 
@@ -74,6 +82,55 @@ def _build_encoder(
     if codebook is None:
         raise FileNotFoundError(f"Codebook not found: {args.codebook_name}")
     return EncodeDocumentUseCase(QuantizedColorMapper(color_mapper, codebook)), codebook
+
+
+def _resolve_paragraphs_per_work(args: VisualizeDocumentsArgs, config: SynestheticConfig) -> int:
+    if args.paragraphs_per_work is not None:
+        return args.paragraphs_per_work
+    return config.dataset.paragraphs_per_work
+
+
+def _build_document_corpus(args: VisualizeDocumentsArgs, config: SynestheticConfig) -> DocumentCorpusDatasetAdapter:
+    return DocumentCorpusDatasetAdapter(
+        documents_dir=args.documents_dir,
+        min_paragraph_chars=args.min_paragraph_chars,
+        paragraphs_per_work=_resolve_paragraphs_per_work(args, config),
+        split_strategy=args.split_strategy,
+        validation_fraction=args.validation_fraction,
+        test_fraction=args.test_fraction,
+    )
+
+
+def _encode_paragraph(
+    text: str,
+    index: int,
+    encode_use_case: EncodeDocumentUseCase,
+    embedding_adapter: SentenceEmbeddingAdapter,
+) -> Optional[ColoredDocument]:
+    embeddings = embedding_adapter.encode_document_sentences(text)
+    if embeddings.shape[0] == 0:
+        return None
+    return encode_use_case.execute(embeddings, document_id=f"paragraph_{index}")
+
+
+def _encode_paragraph_documents(
+    args: VisualizeDocumentsArgs,
+    config: SynestheticConfig,
+    adapter: DocumentCorpusDatasetAdapter,
+    encode_use_case: EncodeDocumentUseCase,
+    embedding_adapter: SentenceEmbeddingAdapter,
+) -> Tuple[List[ColoredDocument], List[int], List[str]]:
+    samples = adapter.get_samples(
+        split=args.figure_split, max_samples=args.max_figure_samples, seed=config.training.seed
+    )
+    documents: List[ColoredDocument] = []
+    labels: List[int] = []
+    for index, sample in enumerate(samples):
+        document = _encode_paragraph(sample.text, index, encode_use_case, embedding_adapter)
+        if document is not None:
+            documents.append(document)
+            labels.append(sample.label)
+    return documents, labels, adapter.get_label_names()
 
 
 def _leading_text(work_path: Path, min_chars: int, count: int) -> str:
@@ -94,10 +151,10 @@ def _encode_book(
     if embeddings.shape[0] == 0:
         return None
     sheet_path = str(Path(args.output_dir) / "a4" / f"{author}__{work}.png")
-    document = image_use_case.execute(
+    image_use_case.execute(
         embeddings, document_id=f"{author}__{work}", layout="signature", output_path=sheet_path, dpi=args.dpi
     )
-    return BookColour(author=author, work=work, document=document, sheet_path=sheet_path)
+    return BookColour(author=author, work=work, sheet_path=sheet_path)
 
 
 def _encode_books(
@@ -115,19 +172,15 @@ def _encode_books(
     return books
 
 
-def _author_labels(books: List[BookColour]) -> Tuple[List[int], List[str]]:
-    label_names: List[str] = []
-    for book in books:
-        if book.author not in label_names:
-            label_names.append(book.author)
-    labels = [label_names.index(book.author) for book in books]
-    return labels, label_names
-
-
-def _render_figures(args: VisualizeDocumentsArgs, books: List[BookColour], codebook: ColorCodebook) -> None:
+def _render_figures(
+    args: VisualizeDocumentsArgs,
+    documents: List[ColoredDocument],
+    labels: List[int],
+    label_names: List[str],
+    books: List[BookColour],
+    codebook: ColorCodebook,
+) -> None:
     use_case = VisualizeDocumentsUseCase(MatplotlibFigureRenderer())
-    labels, label_names = _author_labels(books)
-    documents = [book.document for book in books]
     output_dir = Path(args.output_dir)
 
     signatures_path = str(output_dir / "documents_color_signatures.png")
@@ -144,12 +197,13 @@ def _render_figures(args: VisualizeDocumentsArgs, books: List[BookColour], codeb
     print(f"Saved {gallery_path}")
 
 
-def _log_startup(args: VisualizeDocumentsArgs, book_count: int) -> None:
+def _log_startup(args: VisualizeDocumentsArgs, paragraph_count: int, book_count: int) -> None:
     logger.info(
         "Rendering documents colour figures",
         extra={
             "correlation_id": str(uuid.uuid4()),
             "documents_dir": args.documents_dir,
+            "paragraphs": paragraph_count,
             "books": book_count,
             "output_dir": args.output_dir,
         },
@@ -159,12 +213,21 @@ def _log_startup(args: VisualizeDocumentsArgs, book_count: int) -> None:
 def main(args: VisualizeDocumentsArgs) -> None:
     config = SynestheticConfig.from_yaml(args.config)
     encode_use_case, codebook = _build_encoder(args, config)
+    embedding_adapter = SentenceEmbeddingAdapter()
+    adapter = _build_document_corpus(args, config)
+    documents, labels, label_names = _encode_paragraph_documents(
+        args, config, adapter, encode_use_case, embedding_adapter
+    )
+    if not documents:
+        raise ValueError(f"No paragraphs were encoded from {args.documents_dir}")
+
     image_use_case = EncodeDocumentToImageUseCase(encode_use_case, PillowDocumentImageRenderer())
-    books = _encode_books(args, image_use_case, SentenceEmbeddingAdapter())
+    books = _encode_books(args, image_use_case, embedding_adapter)
     if not books:
         raise ValueError(f"No books were encoded from {args.documents_dir}")
-    _log_startup(args, len(books))
-    _render_figures(args, books, codebook)
+
+    _log_startup(args, len(documents), len(books))
+    _render_figures(args, documents, labels, label_names, books, codebook)
 
 
 if __name__ == "__main__":
