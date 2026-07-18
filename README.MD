@@ -26,7 +26,7 @@ even losslessly store meaning.** What this repository demonstrates, end to end:
   TF-IDF. The gap is the honest price of squeezing meaning into 12 bits.
 - **Documents you can see.** Each text renders *as colour*: a t-SNE where authors form colour
   neighbourhoods, per-author signatures, and an **A4 colours-of-meaning sheet per book**
-  (Darwin's science prose is visibly cyan vs the fiction's dark blue/purple).
+  (Darwin's science prose reads as a distinctive bright red, set apart from the fiction's blues and purples).
 - **Documents you can store losslessly.** The same texts also encode to printable **A4
   colour-barcode pages that decode back byte-for-byte** — all 133 works round-trip with 0
   failures in a local run; the CI-reproducible proof is the committed *A Christmas Carol* page
