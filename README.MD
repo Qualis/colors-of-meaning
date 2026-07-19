@@ -525,6 +525,36 @@ written to the committed [`reports/story_compass.md`](reports/story_compass.md) 
 both regenerable from the command shown. It never calls an external service, so it is fully
 CI-reproducible; feature 024 (Claude-backed generation) consumes this arc for coherence QA.
 
+### Grounding audit
+
+The compass measures a story beat against its whole-book palette; the **grounding audit** points the
+same *coherence* reading at retrieval. A retrieval-augmented answer is supposed to stay inside what was
+retrieved, so the `grounding` CLI encodes the **answer** and each **retrieved passage** as colour
+histograms over the 4,096-colour codebook and measures the perceptual distance from the answer to the
+uniform **mixture** of the passage histograms. A small divergence means the answer's semantic-colour
+mass sits inside the retrieved evidence; a large one means the answer has wandered off it — a cheap,
+interpretable **off-context / drift signal** for RAG. The context palette is a mixture of *distributions*,
+never a mean of Lab colours (which would cancel chroma), reusing the same embedder, codebook, encode
+path, and `DistanceCalculator` ports as the rest of the pipeline — no new dependency.
+
+**This is a distributional off-context signal, not a factuality or citation checker.** A large divergence
+is a strong smell that the answer is topically unsupported by the retrieved passages; a small divergence
+does **not** certify factual correctness — only that the answer's colour distribution lies within the
+context's. It inherits the 384→3 lossy bottleneck, so it is a coarse triage instrument, and the threshold
+is corpus- and metric-dependent, not a universal constant.
+
+```bash
+tox -e grounding -- --sample samples/rag_grounding.yaml --config configs/base.yaml --model-path artifacts/models/projector.pth --codebook-name codebook_4096 --mapper plain --metric sliced --threshold 25
+```
+
+The committed sample asks *"What causes rain in the water cycle?"* with three retrieved passages and two
+candidate answers: a grounded summary of the passages and an off-context answer about central-bank interest
+rates. The audit isolates the drift — the grounded answer scores **12.24** and the off-context answer
+**49.53** against the flagging threshold of **25**, so the fabricated-topic answer is flagged and the
+grounded one is not. The per-answer verdict table is written to the committed
+[`reports/grounding_audit.md`](reports/grounding_audit.md), regenerable from the command shown. It never
+calls an external service, so it is fully CI-reproducible.
+
 ### Generate a book
 
 The compass plans and audits; it cannot *write*. Writing comprehensible prose needs the opposite kind
@@ -885,6 +915,7 @@ vagrant ssh
 | `tox -e visualize_documents -- [args]` | Regenerate the authored-corpus figures (t-SNE, per-author signatures, per-book A4 sheets, A4 gallery) |
 | `tox -e authorship -- [args]` | Write `reports/documents_authorship.md` computed tables from a held-out authored-corpus train/eval (`--refresh-scaling` re-runs the sweep) |
 | `tox -e compass -- [args]` | Read a story outline as a colour trajectory (arc, drift, coherence) |
+| `tox -e grounding -- [args]` | Audit RAG answers for colour-distribution drift from their retrieved context |
 | `tox -e query -- [args]` | Query documents by color palette |
 
 ### Test

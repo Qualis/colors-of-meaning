@@ -11,6 +11,7 @@ from colors_of_meaning.shared.synesthetic_config import (
     SupervisedMapperConfig,
     CompassConfig,
     GenerationConfig,
+    GroundingConfig,
 )
 
 
@@ -555,6 +556,71 @@ class TestGenerationInSynestheticConfig:
         loaded = SynestheticConfig.from_yaml(str(config_path))
         assert loaded.generation.retry_budget == 5
         assert loaded.generation.words_per_beat == 750
+
+
+class TestGroundingConfig:
+    def test_should_default_threshold(self) -> None:
+        config = GroundingConfig()
+
+        assert config.threshold == 25.0
+
+    def test_should_default_metric_to_sliced(self) -> None:
+        config = GroundingConfig()
+
+        assert config.metric == "sliced"
+
+    def test_should_default_sample_and_report_paths(self) -> None:
+        config = GroundingConfig()
+
+        assert config.sample_path == "samples/rag_grounding.yaml"
+        assert config.report_path == "reports/grounding_audit.md"
+
+
+class TestGroundingInSynestheticConfig:
+    def test_should_default_grounding_in_post_init(self) -> None:
+        config = SynestheticConfig(
+            projector=ProjectorConfig(),
+            codebook=CodebookConfig(),
+            training=TrainingConfig(),
+            distance=DistanceConfig(),
+            dataset=DatasetConfig(),
+        )
+
+        assert isinstance(config.grounding, GroundingConfig)
+
+    def test_should_default_grounding_when_missing_from_yaml(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "minimal.yaml"
+        config_path.write_text("{}")
+
+        config = SynestheticConfig.from_yaml(str(config_path))
+
+        assert config.grounding.threshold == 25.0
+
+    def test_should_load_grounding_from_yaml(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("grounding:\n  threshold: 8.5\n  metric: exact\n")
+
+        config = SynestheticConfig.from_yaml(str(config_path))
+
+        assert config.grounding.threshold == 8.5
+        assert config.grounding.metric == "exact"
+
+    def test_should_round_trip_grounding_through_yaml(self, tmp_path: Path) -> None:
+        config = SynestheticConfig(
+            projector=ProjectorConfig(),
+            codebook=CodebookConfig(),
+            training=TrainingConfig(),
+            distance=DistanceConfig(),
+            dataset=DatasetConfig(),
+            grounding=GroundingConfig(threshold=6.0, metric="jensen_shannon"),
+        )
+        config_path = tmp_path / "output.yaml"
+
+        config.to_yaml(str(config_path))
+
+        loaded = SynestheticConfig.from_yaml(str(config_path))
+        assert loaded.grounding.threshold == 6.0
+        assert loaded.grounding.metric == "jensen_shannon"
 
 
 CONFIGS_DIR = Path(__file__).resolve().parents[3] / "configs"

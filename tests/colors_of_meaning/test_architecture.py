@@ -111,6 +111,39 @@ def test_should_not_have_circular_dependencies():
     )
 
 
+def _does_not_import_framework(module, direct_imports, all_imports):
+    frameworks = ("fastapi", "torch", "tyro", "yaml", "ot")
+    return not any(
+        imported == framework or imported.startswith(f"{framework}.")
+        for imported in all_imports.get(module, set())
+        for framework in frameworks
+    )
+
+
+def test_should_keep_grounding_report_free_of_frameworks():
+    (
+        archrule(
+            "Grounding Report Purity",
+            comment="The grounding report value object must not import ML, web or serialisation frameworks",
+        )
+        .match("colors_of_meaning.domain.model.grounding_report")
+        .should(_does_not_import_framework, "does_not_import_framework")
+        .check("colors_of_meaning")
+    )
+
+
+def test_should_keep_evaluate_grounding_use_case_off_infrastructure_and_interface():
+    (
+        archrule(
+            "Evaluate Grounding Use Case Boundaries",
+            comment="The grounding use case depends only on domain abstractions, never on infrastructure or interface",
+        )
+        .match("colors_of_meaning.application.use_case.evaluate_grounding_use_case")
+        .should_not_import("colors_of_meaning.infrastructure.*", "colors_of_meaning.interface.*")
+        .check("colors_of_meaning")
+    )
+
+
 def test_should_maintain_shared_module_independence():
     (
         archrule(

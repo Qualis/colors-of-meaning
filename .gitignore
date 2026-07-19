@@ -75,6 +75,7 @@ reports/*
 !reports/documents_authorship.md
 !reports/documents_rate_distortion.md
 !reports/story_compass.md
+!reports/grounding_audit.md
 !reports/figures
 reports/figures/*
 !reports/figures/rate_distortion.png

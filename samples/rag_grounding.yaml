@@ -1,0 +1,30 @@
+question: What causes rain in the water cycle?
+
+passages:
+  - >-
+    The sun heats water in rivers, lakes, and oceans, and the water evaporates
+    into the air as vapor. Warm air rises, carrying the vapor upward into the
+    atmosphere. This evaporation is the first stage of the water cycle.
+  - >-
+    As water vapor rises it cools and condenses into tiny droplets that gather
+    around dust particles to form clouds. Condensation releases heat and is the
+    stage of the cycle where invisible vapor becomes visible cloud.
+  - >-
+    When the cloud droplets collide and grow heavy enough that the rising air can
+    no longer hold them, they fall back to the ground as precipitation such as
+    rain or snow. The water then collects in rivers and oceans and the cycle
+    repeats.
+
+answers:
+  - id: grounded
+    text: >-
+      Rain forms when the sun evaporates water from oceans and lakes into vapor,
+      the warm vapor rises and cools, and it condenses into cloud droplets. When
+      those droplets grow heavy enough they fall back to the ground as rain, and
+      the water collects and the cycle repeats.
+  - id: off_context
+    text: >-
+      Interest rates set by the central bank drive stock market volatility.
+      When borrowing costs rise, investors reprice equities and bonds, and
+      quarterly earnings guidance moves share prices sharply across the trading
+      session as portfolio managers rebalance their holdings.

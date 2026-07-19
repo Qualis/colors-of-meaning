@@ -84,6 +84,14 @@ class GenerationConfig:
 
 
 @dataclass
+class GroundingConfig:
+    threshold: float = 25.0
+    metric: str = "sliced"
+    sample_path: str = "samples/rag_grounding.yaml"
+    report_path: str = "reports/grounding_audit.md"
+
+
+@dataclass
 class SynestheticConfig:
     projector: ProjectorConfig
     codebook: CodebookConfig
@@ -94,16 +102,25 @@ class SynestheticConfig:
     supervised_mapper: Optional["SupervisedMapperConfig"] = None
     compass: Optional["CompassConfig"] = None
     generation: Optional["GenerationConfig"] = None
+    grounding: Optional["GroundingConfig"] = None
 
     def __post_init__(self) -> None:
+        self._apply_mapper_defaults()
+        self._apply_feature_defaults()
+
+    def _apply_mapper_defaults(self) -> None:
         if self.structured_mapper is None:
             self.structured_mapper = StructuredMapperConfig()
         if self.supervised_mapper is None:
             self.supervised_mapper = SupervisedMapperConfig()
+
+    def _apply_feature_defaults(self) -> None:
         if self.compass is None:
             self.compass = CompassConfig()
         if self.generation is None:
             self.generation = GenerationConfig()
+        if self.grounding is None:
+            self.grounding = GroundingConfig()
 
     @classmethod
     def from_yaml(cls, path: str) -> "SynestheticConfig":
@@ -123,6 +140,7 @@ class SynestheticConfig:
             supervised_mapper=supervised_mapper,
             compass=CompassConfig(**config_dict.get("compass", {})),
             generation=GenerationConfig(**config_dict.get("generation", {})),
+            grounding=GroundingConfig(**config_dict.get("grounding", {})),
         )
 
     def to_yaml(self, path: str) -> None:
@@ -136,6 +154,7 @@ class SynestheticConfig:
             "supervised_mapper": self.supervised_mapper.__dict__,
             "compass": self.compass.__dict__,
             "generation": self.generation.__dict__,
+            "grounding": self.grounding.__dict__,
         }
 
         Path(path).parent.mkdir(parents=True, exist_ok=True)
