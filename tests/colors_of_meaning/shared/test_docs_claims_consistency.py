@@ -15,6 +15,21 @@ def _read_design_doc() -> str:
     return DESIGN_DOC_PATH.read_text(encoding="utf-8")
 
 
+UNIMPLEMENTED_INFRASTRUCTURE_TERMS = (
+    "Redis",
+    "Vault",
+    "Pub/Sub",
+    "circuit breaker",
+    "distributed tracing",
+    "Terraform",
+)
+
+
+def _unimplemented_infrastructure_terms_in(document: str) -> list[str]:
+    lowered = document.lower()
+    return [term for term in UNIMPLEMENTED_INFRASTRUCTURE_TERMS if term.lower() in lowered]
+
+
 class TestReadmeClaimsConsistency:
     def test_should_not_cite_the_stale_73_book_count_when_reading_readme(self) -> None:
         assert_that(_read_readme()).does_not_contain("73 book")
@@ -32,3 +47,8 @@ class TestDesignDocClaimsConsistency:
 
     def test_should_not_describe_training_as_random_targets_when_reading_design_doc(self) -> None:
         assert_that(_read_design_doc()).does_not_contain("random targets")
+
+
+class TestReadmeDoesNotOverclaimInfrastructure:
+    def test_should_not_advertise_unimplemented_infrastructure_when_reading_readme(self) -> None:
+        assert_that(_unimplemented_infrastructure_terms_in(_read_readme())).is_empty()

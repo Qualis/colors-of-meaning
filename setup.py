@@ -11,7 +11,7 @@ if __name__ == "__main__":
                 ]
             },
         )
-    except:  # noqa
+    except Exception:
         print(
             "\n\nAn error occurred while building the project, "
             "please ensure you have the most updated version of setuptools, "

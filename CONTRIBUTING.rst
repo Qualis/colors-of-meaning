@@ -22,14 +22,7 @@ Be sure to include:
 Documentation Improvements
 ==========================
 
-Docs are written in reStructuredText_ using Sphinx_. To improve them, submit changes via GitHub’s web editor or in a local dev environment.
-
-Quick preview via:
-
-.. code:: bash
-
-    tox -e docs
-    python3 -m http.server --directory 'docs/_build/html'
+The primary project documentation is ``README.MD``; the architecture rationale and design notes live in ``docs/design.md``. Improve either via a pull request.
 
 Code Contributions
 ==================
@@ -90,10 +83,11 @@ We require 100% test coverage and use:
 - flake8
 - black
 - bandit
+- semgrep
+- pip-audit
+- radon
 - xenon (grade A)
 - mypy
-- safety & dependency-check
-- semgrep
 
 Push and PR
 -----------

@@ -423,78 +423,70 @@ class CoconutUseCase:
 
 ## Observability Requirements
 
-### Structured Logging
-- Include `correlation-id` in all log entries
-- Use structured logging format (JSON)
-- Log at appropriate levels (DEBUG, INFO, WARNING, ERROR)
+### Structured Logging (implemented)
+- Include a `correlation-id` in log entries
+- Log at appropriate levels (DEBUG, INFO, WARNING, ERROR) using the standard-library logger
 
-### Metrics Collection
-- Track key business metrics
-- Monitor performance indicators
-- Use appropriate metric types (counters, gauges, histograms)
-
-### Distributed Tracing
-- Implement tracing decorators for use cases
-- Propagate trace context across service boundaries
-- Track request flows through the system
+### Metrics & Distributed Tracing (not implemented)
+- The project does **not** ship a metrics backend or distributed tracing; correlation-id structured logging is the current observability surface
+- If a feature needs metrics or tracing, add it behind a `domain/service` port with an adapter in `infrastructure/observability/` — do not assume it already exists
 
 ## Security Requirements
 
-### Authentication & Authorization
-- Implement token-based authentication in `infrastructure/security/`
-- Define authentication domain logic in `domain/authentication/`
+### Authentication & Authorization (implemented)
+- Basic authentication with Argon2id password hashing lives in `infrastructure/security/`
+- Authentication domain logic lives in `domain/authentication/`
 - Never commit credentials or secrets
 
 ### Auditing
-- Log key domain events for audit trail
-- Include user context in audit logs
-- Implement tamper-proof audit logging
+- Log key domain events (with `correlation-id`) for an audit trail
+- Include user context in audit logs where available
+- Tamper-proof / append-only audit storage is not implemented; the audit trail is structured logging
 
 ### Secrets Management
-- Use Vault or equivalent for secret storage
+- Load secrets from the environment (developer-exported Argon2id credential hashes via a git-ignored `.env`)
 - Never hardcode secrets in code
-- Load secrets from environment or secret manager
+- A dedicated secret manager (e.g. Vault) is not used; the environment-based approach above is the current mechanism
 
-## Enhancing System Quality
+## System Qualities
 
-### Performance and Scalability
+The qualities below describe the intended architecture. Items are marked **(implemented)** where they exist in the codebase today and **(aspirational)** where they are target patterns the hexagonal structure would support but which are **not yet built** — do not assume aspirational items exist.
 
-- Implement caching strategies (`Redis`) for frequently accessed data.
-- Use message queues (`Pub/Sub`) for asynchronous tasks.
+### Maintainability and Modularity (implemented)
 
-### Reliability and Fault Tolerance
-
-- Explicitly define retry and circuit breaker strategies.
-- Clearly document error handling and recovery procedures.
-
-### Maintainability and Modularity
-
-- Clearly define module boundaries and use explicit interfaces (`ABC`).
+- Explicit module boundaries and `ABC` interfaces, enforced by the `pytest-archon` architecture tests.
 
 ### Observability and Monitoring
 
-- Structured logging with `correlation-id`.
-- Metrics collection and distributed tracing.
+- Structured logging with `correlation-id` (implemented).
+- Metrics collection and distributed tracing (aspirational — not implemented).
 
-### Security
+### Security (implemented)
 
-- Auditing of key domain events.
-- Secure management of secrets (`Vault`).
+- Argon2id-hashed authentication and auditing of key domain events via structured logging.
+- Secrets loaded from the environment; a secret manager such as Vault is aspirational.
 
-### Availability
+### Availability (implemented)
 
-- Explicit fall-back or degraded-service strategies.
-- Robust health-check mechanisms.
+- Robust health checks (readiness verifies codebook/model artifacts; liveness reads heap state).
+- Fall-back / degraded-service behaviour where applicable.
 
-### Testability
+### Testability (implemented)
 
-- Include integration and end-to-end tests for core functionality.
-- Contract testing for integrations.
+- 100% test coverage, integration tests, and consumer/producer contract tests.
 
 ### Portability
 
-- Containerization strategy (`Docker`).
-- Infrastructure as code (`Terraform`, `Ansible`, `Packer`).
+- Containerization via Docker images built with Packer and Ansible (implemented).
+- Terraform-based infrastructure-as-code (aspirational — Packer and Ansible are used today; Terraform is not).
+
+### Performance and Scalability (aspirational — not implemented)
+
+- Caching (e.g. `Redis`) and asynchronous messaging (e.g. `Pub/Sub`) are target patterns, not current features.
+
+### Reliability and Fault Tolerance (aspirational — not implemented)
+
+- Retry and circuit-breaker strategies are target patterns; document error handling and recovery as features add them.
 
 ## Code Quality Standards
 
