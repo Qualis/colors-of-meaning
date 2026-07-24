@@ -106,6 +106,12 @@ Push and PR
 
 2. Open a Pull Request via GitHub.
 
+Every pull request targeting ``main`` runs the **PR Gate** workflow, which executes the full ``tox`` quality gate (all static checks plus the test suite at 100% coverage) as well as ``shellcheck`` and ``ansible-lint``. A pull request must be green before it is merged.
+
+.. note::
+
+   Maintainers: make the ``pr-gate`` status check **required** under *Settings → Branches → Branch protection rules* for ``main`` so the gate blocks merges rather than only reporting. This is a one-time repository setting and cannot be committed as a file.
+
 Release Process (Maintainers Only)
 ==================================
 
