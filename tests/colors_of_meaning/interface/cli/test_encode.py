@@ -60,8 +60,8 @@ class TestEncodeCLI:
 
         try:
             _load_codebook("missing_codebook")
-            raise AssertionError("Should have raised ValueError")
-        except ValueError as e:
+            raise AssertionError("Should have raised FileNotFoundError")
+        except FileNotFoundError as e:
             assert "not found" in str(e)
 
     @patch("colors_of_meaning.interface.cli.encode._setup_color_mapper")

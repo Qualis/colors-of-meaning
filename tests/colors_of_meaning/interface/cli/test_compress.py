@@ -176,5 +176,5 @@ class TestCompressCLI:
         mock_repo_class.return_value.load.return_value = None
         mock_np.load.return_value = np.random.randn(5, 8).astype(np.float32)
 
-        with pytest.raises(ValueError, match="not found"):
+        with pytest.raises(FileNotFoundError, match="not found"):
             main(CompressArgs(embeddings_path=str(tmp_path / "embeddings.npy")))

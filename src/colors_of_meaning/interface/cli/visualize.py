@@ -22,6 +22,7 @@ from colors_of_meaning.infrastructure.dataset.imdb_dataset_adapter import (
 from colors_of_meaning.infrastructure.dataset.newsgroups_dataset_adapter import (
     NewsgroupsDatasetAdapter,
 )
+from colors_of_meaning.domain.service.classifier import Classifier
 from colors_of_meaning.infrastructure.evaluation.color_histogram_classifier import (
     ColorHistogramClassifier,
 )
@@ -173,7 +174,7 @@ def _run_confusion_matrix_visualization(args: VisualizeArgs) -> None:
     print("Done.")
 
 
-def _create_classifier(args: VisualizeArgs, config: SynestheticConfig):  # type: ignore
+def _create_classifier(args: VisualizeArgs, config: SynestheticConfig) -> Classifier:
     if args.method == "color":
         embedding_adapter = SentenceEmbeddingAdapter()
         color_mapper = PyTorchColorMapper(

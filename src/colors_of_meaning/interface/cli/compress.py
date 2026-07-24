@@ -37,7 +37,7 @@ class CompressArgs:
 def _load_codebook(codebook_name: str) -> ColorCodebook:
     codebook = FileColorCodebookRepository().load(codebook_name)
     if codebook is None:
-        raise ValueError(f"Codebook {codebook_name} not found")
+        raise FileNotFoundError(f"Codebook not found: {codebook_name}")
     return codebook
 
 
