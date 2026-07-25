@@ -1,3 +1,4 @@
+import logging
 from typing import Any, List, Optional, Sized
 import numpy as np
 import numpy.typing as npt
@@ -17,6 +18,8 @@ from colors_of_meaning.infrastructure.ml.structured_lab_projector_network import
     StructuredLabProjectorNetwork,
 )
 from colors_of_meaning.shared.determinism import seed_everything
+
+logger = logging.getLogger(__name__)
 
 _NEUTRAL_LIGHTNESS = 50.0
 _MIN_SENTIMENT_LIGHTNESS = 20.0
@@ -144,7 +147,7 @@ class StructuredPyTorchColorMapper(ColorMapper):
             self._epoch_checkpoints.append(self._capture_state())
 
             if (epoch + 1) % 10 == 0:
-                print(f"Epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
+                logger.info("Epoch [%d/%d], Loss: %.4f", epoch + 1, epochs, avg_loss)
 
         return best_state
 

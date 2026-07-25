@@ -1,5 +1,4 @@
 from unittest.mock import Mock, patch, mock_open
-import pytest
 
 from colors_of_meaning.interface.cli.query import main, QueryArgs, _parse_palette
 from colors_of_meaning.domain.model.lab_color import LabColor
@@ -47,7 +46,7 @@ class TestParsePalette:
 
 
 class TestQueryCLI:
-    @patch("colors_of_meaning.interface.cli.query.FileColorCodebookRepository")
+    @patch("colors_of_meaning.interface.cli.query.load_codebook")
     @patch("colors_of_meaning.interface.cli.query.WassersteinDistanceCalculator")
     @patch("colors_of_meaning.interface.cli.query.CompareDocumentsUseCase")
     @patch("colors_of_meaning.interface.cli.query.QueryByPaletteUseCase")
@@ -62,11 +61,9 @@ class TestQueryCLI:
         mock_query_class: Mock,
         mock_compare_class: Mock,
         mock_distance_class: Mock,
-        mock_repo_class: Mock,
+        mock_load_codebook: Mock,
     ) -> None:
-        mock_repo = Mock()
-        mock_repo.load.return_value = Mock(num_bins=8)
-        mock_repo_class.return_value = mock_repo
+        mock_load_codebook.return_value = Mock(num_bins=8)
 
         mock_pickle.load.return_value = []
 
@@ -84,31 +81,4 @@ class TestQueryCLI:
         main(args)
 
         mock_query.execute.assert_called_once()
-        mock_distance_class.assert_called_once_with(codebook=mock_repo.load.return_value)
-
-    @patch("colors_of_meaning.interface.cli.query.FileColorCodebookRepository")
-    @patch("builtins.open", new_callable=mock_open)
-    @patch("colors_of_meaning.interface.cli.query.pickle")
-    @patch("builtins.print")
-    def test_should_raise_when_codebook_not_found(
-        self,
-        mock_print: Mock,
-        mock_pickle: Mock,
-        mock_file: Mock,
-        mock_repo_class: Mock,
-    ) -> None:
-        mock_repo = Mock()
-        mock_repo.load.return_value = None
-        mock_repo_class.return_value = mock_repo
-
-        mock_pickle.load.return_value = []
-
-        args = QueryArgs(
-            palette_json='[{"l": 50, "a": 0, "b": 0, "weight": 1.0}]',
-            encoded_documents="test.pkl",
-            codebook_name="missing_codebook",
-            k=5,
-        )
-
-        with pytest.raises(FileNotFoundError):
-            main(args)
+        mock_distance_class.assert_called_once_with(codebook=mock_load_codebook.return_value)

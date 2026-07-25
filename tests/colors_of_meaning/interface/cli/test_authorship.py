@@ -23,7 +23,6 @@ from colors_of_meaning.interface.cli.authorship import (
     _corpus_summary,
     _format_bits,
     _held_out_rows,
-    _load_codebook,
     _provenance_line,
     _report_lines,
     _reproduce_command,
@@ -114,22 +113,6 @@ class TestBuildColorMapper:
         _build_color_mapper(AuthorshipArgs(model_path="model.pth"), Mock())
 
         create.return_value.load_weights.assert_called_once_with("model.pth")
-
-
-class TestLoadCodebook:
-    def test_should_return_the_codebook_when_it_exists(self, mocker) -> None:
-        repository = mocker.patch(f"{MODULE}.FileColorCodebookRepository")
-        sentinel = Mock()
-        repository.return_value.load.return_value = sentinel
-
-        assert _load_codebook("codebook_documents_valsel") is sentinel
-
-    def test_should_raise_when_the_codebook_is_missing(self, mocker) -> None:
-        repository = mocker.patch(f"{MODULE}.FileColorCodebookRepository")
-        repository.return_value.load.return_value = None
-
-        with pytest.raises(FileNotFoundError, match="Codebook not found"):
-            _load_codebook("missing")
 
 
 class TestBuildClassifier:
@@ -233,7 +216,7 @@ class TestMain:
         mocker.patch(f"{MODULE}._build_document_corpus", return_value=adapter)
         mocker.patch(f"{MODULE}.SentenceEmbeddingAdapter")
         mocker.patch(f"{MODULE}._build_color_mapper")
-        mocker.patch(f"{MODULE}._load_codebook")
+        mocker.patch(f"{MODULE}.load_codebook")
         mocker.patch(f"{MODULE}._build_evaluate_factory")
         mocker.patch(f"{MODULE}._build_scaling_sweep")
         mocker.patch(f"{MODULE}.JsonAuthorshipScalingRepository")

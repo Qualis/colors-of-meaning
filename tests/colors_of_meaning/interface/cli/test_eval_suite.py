@@ -26,7 +26,6 @@ from colors_of_meaning.interface.cli.eval_suite import (
     _build_retriever,
     _encode_documents,
     _fidelity_rows,
-    _load_codebook,
     _print_table,
     _provenance_line,
     _reproduce_command,
@@ -267,20 +266,6 @@ class TestEvalSuiteHelpers:
 
         assert adapter is adapter_class.return_value
 
-    def test_should_raise_file_not_found_when_codebook_is_absent(self) -> None:
-        with patch("colors_of_meaning.interface.cli.eval_suite.FileColorCodebookRepository") as repo_class:
-            repo_class.return_value.load.return_value = None
-
-            with pytest.raises(FileNotFoundError, match="Codebook not found"):
-                _load_codebook("missing")
-
-    def test_should_return_codebook_when_present(self) -> None:
-        with patch("colors_of_meaning.interface.cli.eval_suite.FileColorCodebookRepository") as repo_class:
-            codebook = Mock()
-            repo_class.return_value.load.return_value = codebook
-
-            assert _load_codebook("codebook_4096") is codebook
-
     def test_should_encode_one_document_per_sample(self) -> None:
         embedding_adapter = Mock()
         embedding_adapter.encode_document_sentences.return_value = np.zeros((1, 3), dtype=np.float32)
@@ -461,10 +446,7 @@ def _run_main(tmp_path: Path, fidelity: DistanceFidelity, evaluated: List[Evalua
         ).from_yaml.return_value = config
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.SentenceEmbeddingAdapter"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.create_color_mapper"))
-        repo_class = stack.enter_context(
-            patch("colors_of_meaning.interface.cli.eval_suite.FileColorCodebookRepository")
-        )
-        repo_class.return_value.load.return_value = Mock()
+        stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.load_codebook"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")).return_value = (
             fidelity
         )
@@ -498,10 +480,7 @@ class TestEvalSuiteMain:
             ).from_yaml.return_value = config
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.SentenceEmbeddingAdapter"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.create_color_mapper"))
-            repo_class = stack.enter_context(
-                patch("colors_of_meaning.interface.cli.eval_suite.FileColorCodebookRepository")
-            )
-            repo_class.return_value.load.return_value = Mock()
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.load_codebook"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")).return_value = (
                 _fidelity(is_faithful=True)
             )
@@ -526,10 +505,7 @@ class TestEvalSuiteMain:
             ).from_yaml.return_value = config
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.SentenceEmbeddingAdapter"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.create_color_mapper"))
-            repo_class = stack.enter_context(
-                patch("colors_of_meaning.interface.cli.eval_suite.FileColorCodebookRepository")
-            )
-            repo_class.return_value.load.return_value = Mock()
+            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.load_codebook"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")).return_value = (
                 _fidelity(is_faithful=False)
             )

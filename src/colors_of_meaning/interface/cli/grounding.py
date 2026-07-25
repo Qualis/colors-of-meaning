@@ -31,9 +31,7 @@ from colors_of_meaning.infrastructure.ml.sliced_wasserstein_distance_calculator 
 from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import (
     WassersteinDistanceCalculator,
 )
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 from colors_of_meaning.shared.synesthetic_config import SynestheticConfig
 
 logger = logging.getLogger(__name__)
@@ -85,13 +83,6 @@ def _load_sample(sample_path: str) -> RagSample:
     return RagSample(question=raw["question"], passages=list(raw["passages"]), answers=answers)
 
 
-def _load_codebook(codebook_name: str) -> ColorCodebook:
-    codebook = FileColorCodebookRepository().load(codebook_name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found: {codebook_name}")
-    return codebook
-
-
 def _build_mapper(args: GroundingArgs, config: SynestheticConfig) -> ColorMapper:
     mapper = create_color_mapper(_MAPPER_TYPES[args.mapper], config)
     mapper.load_weights(args.model_path)
@@ -109,7 +100,7 @@ def _create_distance_calculator(metric: str, codebook: ColorCodebook, config: Sy
 
 
 def _build_pipeline(args: GroundingArgs, config: SynestheticConfig) -> GroundingPipeline:
-    codebook = _load_codebook(args.codebook_name)
+    codebook = load_codebook(args.codebook_name)
     encode = EncodeDocumentUseCase(QuantizedColorMapper(_build_mapper(args, config), codebook))
     use_case = EvaluateGroundingUseCase(_create_distance_calculator(args.metric, codebook, config))
     return GroundingPipeline(embedder=SentenceEmbeddingAdapter(), encode=encode, use_case=use_case)

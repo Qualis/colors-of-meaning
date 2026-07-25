@@ -51,9 +51,7 @@ from colors_of_meaning.infrastructure.ml.jensen_shannon_distance_calculator impo
 from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import (
     WassersteinDistanceCalculator,
 )
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 from colors_of_meaning.shared.synesthetic_config import SynestheticConfig
 
 logger = logging.getLogger(__name__)
@@ -88,18 +86,11 @@ def _create_distance_calculator(
     raise ValueError(f"Unknown metric: {metric_name}")
 
 
-def _load_codebook(name: str) -> ColorCodebook:
-    codebook = FileColorCodebookRepository().load(name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found at {name}")
-    return codebook
-
-
 def _parse_codebook_specification(specification: str) -> Tuple[str, ColorCodebook]:
     label, separator, path = specification.partition("=")
     if not separator:
         raise ValueError(f"Codebook specification must be label=path, got {specification}")
-    return label, _load_codebook(path)
+    return label, load_codebook(path)
 
 
 def _build_classifier_factory(

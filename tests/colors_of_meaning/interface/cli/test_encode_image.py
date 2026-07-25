@@ -2,7 +2,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import numpy as np
-import pytest
 
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
 from colors_of_meaning.interface.cli.encode_image import (
@@ -49,34 +48,20 @@ class TestResolveText:
 class TestBuildEncodeUseCase:
     @patch(f"{MODULE}.EncodeDocumentUseCase")
     @patch(f"{MODULE}.QuantizedColorMapper")
-    @patch(f"{MODULE}.FileColorCodebookRepository")
+    @patch(f"{MODULE}.load_codebook")
     @patch(f"{MODULE}.PyTorchColorMapper")
     def test_should_return_use_case_when_codebook_exists(
         self,
         _mock_mapper_class: Mock,
-        mock_repo_class: Mock,
+        mock_load_codebook: Mock,
         _mock_quantized_class: Mock,
         mock_encode_class: Mock,
     ) -> None:
-        mock_repo_class.return_value.load.return_value = Mock()
+        mock_load_codebook.return_value = Mock()
 
         use_case = _build_encode_use_case(Mock(), "model.pth", "codebook_4096")
 
         assert use_case is mock_encode_class.return_value
-
-    @patch(f"{MODULE}.QuantizedColorMapper")
-    @patch(f"{MODULE}.FileColorCodebookRepository")
-    @patch(f"{MODULE}.PyTorchColorMapper")
-    def test_should_raise_when_codebook_not_found(
-        self,
-        _mock_mapper_class: Mock,
-        mock_repo_class: Mock,
-        _mock_quantized_class: Mock,
-    ) -> None:
-        mock_repo_class.return_value.load.return_value = None
-
-        with pytest.raises(FileNotFoundError, match="Codebook not found"):
-            _build_encode_use_case(Mock(), "model.pth", "missing")
 
 
 class TestEncodeImageMain:

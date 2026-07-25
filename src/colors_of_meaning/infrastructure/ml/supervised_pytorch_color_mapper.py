@@ -1,3 +1,4 @@
+import logging
 from typing import Any, List, Optional
 import numpy.typing as npt
 import torch
@@ -11,6 +12,8 @@ from colors_of_meaning.infrastructure.ml.pytorch_color_mapper import (
     offdiagonal_entries,
 )
 from colors_of_meaning.shared.determinism import seed_everything
+
+logger = logging.getLogger(__name__)
 
 
 class SupervisedPyTorchColorMapper(ColorMapper):
@@ -120,7 +123,7 @@ class SupervisedPyTorchColorMapper(ColorMapper):
             self._epoch_checkpoints.append(self._capture_state())
 
             if (epoch + 1) % 10 == 0:
-                print(f"Epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
+                logger.info("Epoch [%d/%d], Loss: %.4f", epoch + 1, epochs, avg_loss)
 
         return best_state
 

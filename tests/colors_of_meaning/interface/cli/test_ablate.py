@@ -16,7 +16,6 @@ from colors_of_meaning.interface.cli.ablate import (
     main,
     _build_classifier_factory,
     _create_distance_calculator,
-    _load_codebook,
     _parse_codebook_specification,
     _structure_sample_budget,
 )
@@ -56,8 +55,8 @@ def _run_main(tmp_path: Path, scripted_results: List[AblationResult]) -> Tuple[M
         )
 
         stack.enter_context(patch("colors_of_meaning.interface.cli.ablate.create_color_mapper"))
-        repo_class = stack.enter_context(patch("colors_of_meaning.interface.cli.ablate.FileColorCodebookRepository"))
-        repo_class.return_value.load.return_value = Mock()
+        mock_load_codebook = stack.enter_context(patch("colors_of_meaning.interface.cli.ablate.load_codebook"))
+        mock_load_codebook.return_value = Mock()
         stack.enter_context(patch("colors_of_meaning.interface.cli.ablate.SpearmanStructurePreservationEvaluator"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.ablate.SklearnMetricsCalculator"))
 
@@ -105,13 +104,6 @@ class TestAblateCLI:
     def test_should_raise_value_error_when_metric_is_unknown(self) -> None:
         with pytest.raises(ValueError, match="Unknown metric"):
             _create_distance_calculator("unknown", Mock(), Mock())
-
-    def test_should_raise_file_not_found_when_codebook_is_absent(self) -> None:
-        with patch("colors_of_meaning.interface.cli.ablate.FileColorCodebookRepository") as repo_class:
-            repo_class.return_value.load.return_value = None
-
-            with pytest.raises(FileNotFoundError, match="Codebook not found"):
-                _load_codebook("missing")
 
     def test_should_raise_value_error_when_codebook_specification_lacks_separator(self) -> None:
         with pytest.raises(ValueError, match="label=path"):

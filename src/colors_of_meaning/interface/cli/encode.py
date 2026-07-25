@@ -9,15 +9,12 @@ from colors_of_meaning.infrastructure.embedding.sentence_embedding_adapter impor
     SentenceEmbeddingAdapter,
 )
 from colors_of_meaning.infrastructure.ml.pytorch_color_mapper import PyTorchColorMapper
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
 from colors_of_meaning.domain.service.color_mapper import QuantizedColorMapper
 from colors_of_meaning.application.use_case.encode_document_use_case import (
     EncodeDocumentUseCase,
 )
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
-from colors_of_meaning.domain.model.color_codebook import ColorCodebook
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 
 
 @dataclass
@@ -46,17 +43,9 @@ def _setup_color_mapper(config: SynestheticConfig, model_path: str) -> PyTorchCo
     return color_mapper
 
 
-def _load_codebook(codebook_name: str) -> ColorCodebook:
-    codebook_repo = FileColorCodebookRepository()
-    codebook = codebook_repo.load(codebook_name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found: {codebook_name}")
-    return codebook
-
-
 def _create_use_case(config: SynestheticConfig, model_path: str, codebook_name: str) -> EncodeDocumentUseCase:
     color_mapper = _setup_color_mapper(config, model_path)
-    codebook = _load_codebook(codebook_name)
+    codebook = load_codebook(codebook_name)
     quantized_mapper = QuantizedColorMapper(color_mapper, codebook)
     return EncodeDocumentUseCase(quantized_mapper)
 

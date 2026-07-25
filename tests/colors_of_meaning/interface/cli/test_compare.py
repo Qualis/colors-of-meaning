@@ -1,7 +1,6 @@
 from pathlib import Path
 from unittest.mock import Mock, patch, mock_open
 import numpy as np
-import pytest
 
 from colors_of_meaning.interface.cli.compare import main, CompareArgs
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
@@ -9,7 +8,7 @@ from colors_of_meaning.domain.model.colored_document import ColoredDocument
 
 class TestCompareCLI:
     @patch("colors_of_meaning.interface.cli.compare.SynestheticConfig")
-    @patch("colors_of_meaning.interface.cli.compare.FileColorCodebookRepository")
+    @patch("colors_of_meaning.interface.cli.compare.load_codebook")
     @patch("builtins.open", new_callable=mock_open)
     @patch("colors_of_meaning.interface.cli.compare.pickle")
     @patch("colors_of_meaning.interface.cli.compare.WassersteinDistanceCalculator")
@@ -22,7 +21,7 @@ class TestCompareCLI:
         mock_calculator_class: Mock,
         mock_pickle: Mock,
         mock_file: Mock,
-        mock_codebook_repo_class: Mock,
+        mock_load_codebook: Mock,
         mock_config_class: Mock,
         tmp_path: Path,
     ) -> None:
@@ -31,9 +30,7 @@ class TestCompareCLI:
         mock_config_class.from_yaml.return_value = mock_config
 
         mock_codebook = Mock()
-        mock_codebook_repo = Mock()
-        mock_codebook_repo.load.return_value = mock_codebook
-        mock_codebook_repo_class.return_value = mock_codebook_repo
+        mock_load_codebook.return_value = mock_codebook
 
         doc1 = ColoredDocument(histogram=np.array([0.5, 0.5], dtype=np.float64), document_id="doc1")
         doc2 = ColoredDocument(histogram=np.array([0.3, 0.7], dtype=np.float64), document_id="doc2")
@@ -133,37 +130,3 @@ class TestCompareCLI:
             raise AssertionError("Should have raised ValueError")
         except ValueError as e:
             assert "out of range" in str(e)
-
-    @patch("colors_of_meaning.interface.cli.compare.SynestheticConfig")
-    @patch("colors_of_meaning.interface.cli.compare.FileColorCodebookRepository")
-    @patch("builtins.open", new_callable=mock_open)
-    @patch("colors_of_meaning.interface.cli.compare.pickle")
-    @patch("builtins.print")
-    def test_should_raise_error_when_codebook_not_found(
-        self,
-        mock_print: Mock,
-        mock_pickle: Mock,
-        mock_file: Mock,
-        mock_codebook_repo_class: Mock,
-        mock_config_class: Mock,
-        tmp_path: Path,
-    ) -> None:
-        mock_config = Mock()
-        mock_config.distance.metric = "wasserstein"
-        mock_config_class.from_yaml.return_value = mock_config
-
-        mock_codebook_repo = Mock()
-        mock_codebook_repo.load.return_value = None
-        mock_codebook_repo_class.return_value = mock_codebook_repo
-
-        doc1 = ColoredDocument(histogram=np.array([0.5, 0.5], dtype=np.float64))
-        mock_pickle.load.return_value = [doc1]
-
-        args = CompareArgs(
-            config=str(tmp_path / "config.yaml"),
-            encoded_documents=str(tmp_path / "encoded.pkl"),
-            query_index=0,
-        )
-
-        with pytest.raises(FileNotFoundError, match="Codebook not found"):
-            main(args)

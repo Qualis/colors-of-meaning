@@ -6,12 +6,8 @@ from typing import List
 
 from colors_of_meaning.domain.model.lab_color import LabColor
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
-from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import (
     WassersteinDistanceCalculator,
-)
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
 )
 from colors_of_meaning.application.use_case.compare_documents_use_case import (
     CompareDocumentsUseCase,
@@ -19,6 +15,7 @@ from colors_of_meaning.application.use_case.compare_documents_use_case import (
 from colors_of_meaning.application.use_case.query_by_palette_use_case import (
     QueryByPaletteUseCase,
 )
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 
 
 @dataclass
@@ -49,11 +46,7 @@ def main(args: QueryArgs) -> None:
         documents: List[ColoredDocument] = pickle.load(f)  # nosec B301 nosemgrep
 
     print(f"Loading codebook {args.codebook_name}...")
-    codebook_repo = FileColorCodebookRepository()
-    codebook_result = codebook_repo.load(args.codebook_name)
-    if codebook_result is None:
-        raise FileNotFoundError(f"Codebook {args.codebook_name} not found")
-    codebook: ColorCodebook = codebook_result
+    codebook = load_codebook(args.codebook_name)
 
     palette = _parse_palette(args.palette_json)
     print(f"Querying with {len(palette)} colors, k={args.k}...")

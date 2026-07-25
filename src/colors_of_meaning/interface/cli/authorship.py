@@ -41,12 +41,10 @@ from colors_of_meaning.infrastructure.ml.color_mapper_factory import create_colo
 from colors_of_meaning.infrastructure.ml.jensen_shannon_distance_calculator import (
     JensenShannonDistanceCalculator,
 )
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
 from colors_of_meaning.infrastructure.persistence.json_authorship_scaling_repository import (
     JsonAuthorshipScalingRepository,
 )
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 from colors_of_meaning.shared.synesthetic_config import SynestheticConfig
 
 logger = logging.getLogger(__name__)
@@ -95,13 +93,6 @@ def _split_count(adapter: DocumentCorpusDatasetAdapter, split: str, seed: int) -
 def _corpus_summary(adapter: DocumentCorpusDatasetAdapter, seed: int) -> AuthorshipCorpus:
     split_counts = [(split, _split_count(adapter, split, seed)) for split in ("train", "validation", "test")]
     return AuthorshipCorpus(authors_works=adapter.works_per_author(), split_counts=split_counts)
-
-
-def _load_codebook(codebook_name: str) -> ColorCodebook:
-    codebook = FileColorCodebookRepository().load(codebook_name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found: {codebook_name}")
-    return codebook
 
 
 def _build_color_mapper(args: AuthorshipArgs, config: SynestheticConfig) -> ColorMapper:
@@ -364,7 +355,7 @@ def main(args: AuthorshipArgs) -> None:
 
     embedding_adapter = SentenceEmbeddingAdapter()
     color_mapper = _build_color_mapper(args, config)
-    codebook = _load_codebook(args.codebook_name)
+    codebook = load_codebook(args.codebook_name)
     _log_startup(args, config, corpus)
 
     factory = _build_evaluate_factory(args, config, reference_adapter, embedding_adapter, color_mapper, codebook)

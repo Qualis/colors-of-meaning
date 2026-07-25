@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import torch
 from pathlib import Path
@@ -169,15 +171,16 @@ class TestSupervisedTraining:
 
         assert mapper.classification_head.out_features == 5
 
-    def test_should_print_loss_when_epoch_count_reaches_ten(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_should_log_loss_when_epoch_count_reaches_ten(self, caplog: pytest.LogCaptureFixture) -> None:
         mapper = SupervisedPyTorchColorMapper(input_dim=10, device="cpu", num_classes=2)
         embeddings = np.random.randn(10, 10).astype(np.float32)
         labels = np.array([0, 1] * 5)
 
         mapper.set_training_labels(labels)
-        mapper.train(embeddings, epochs=10, learning_rate=0.001)
+        with caplog.at_level(logging.INFO):
+            mapper.train(embeddings, epochs=10, learning_rate=0.001)
 
-        assert "Epoch [10/10]" in capsys.readouterr().out
+        assert "Epoch [10/10]" in caplog.text
 
     def test_should_reproduce_lab_output_when_same_seed(self) -> None:
         embedding = np.arange(10, dtype=np.float32)

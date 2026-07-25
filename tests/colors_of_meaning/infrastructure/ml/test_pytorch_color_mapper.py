@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 import numpy as np
@@ -211,13 +212,14 @@ class TestPyTorchColorMapper:
 
         assert isinstance(mapper.embed_to_lab(embeddings[0]), LabColor)
 
-    def test_should_print_loss_when_epoch_count_reaches_ten(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_should_log_loss_when_epoch_count_reaches_ten(self, caplog: pytest.LogCaptureFixture) -> None:
         mapper = PyTorchColorMapper(input_dim=10, device="cpu")
         embeddings = np.random.randn(20, 10).astype(np.float32)
 
-        mapper.train(embeddings, epochs=10, learning_rate=0.001)
+        with caplog.at_level(logging.INFO):
+            mapper.train(embeddings, epochs=10, learning_rate=0.001)
 
-        assert "Epoch [10/10]" in capsys.readouterr().out
+        assert "Epoch [10/10]" in caplog.text
 
     def test_should_correlate_embedding_similarity_with_color_proximity_when_trained(self) -> None:
         rng = np.random.default_rng(7)

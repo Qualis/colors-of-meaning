@@ -1,3 +1,4 @@
+import logging
 from typing import Any, List
 import numpy.typing as npt
 import torch
@@ -7,6 +8,8 @@ from pathlib import Path
 from colors_of_meaning.domain.model.lab_color import LabColor
 from colors_of_meaning.domain.service.color_mapper import ColorMapper
 from colors_of_meaning.shared.determinism import seed_everything
+
+logger = logging.getLogger(__name__)
 
 
 def offdiagonal_entries(matrix: torch.Tensor) -> torch.Tensor:
@@ -102,7 +105,7 @@ class PyTorchColorMapper(ColorMapper):
             self._epoch_checkpoints.append(self._capture_state())
 
             if (epoch + 1) % 10 == 0:
-                print(f"Epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
+                logger.info("Epoch [%d/%d], Loss: %.4f", epoch + 1, epochs, avg_loss)
 
     def _capture_state(self) -> dict:
         return {key: value.clone() for key, value in self.network.state_dict().items()}

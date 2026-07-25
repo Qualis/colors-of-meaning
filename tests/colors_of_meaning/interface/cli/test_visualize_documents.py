@@ -42,23 +42,15 @@ class TestVisualizeDocumentsArgs:
 
 
 class TestBuildEncoder:
-    @patch(f"{MODULE}.FileColorCodebookRepository")
+    @patch(f"{MODULE}.load_codebook")
     @patch(f"{MODULE}.create_color_mapper")
-    def test_should_return_codebook_when_it_exists(self, _mapper: Mock, repository: Mock) -> None:
+    def test_should_return_codebook_when_it_exists(self, _mapper: Mock, load_codebook: Mock) -> None:
         sentinel = Mock()
-        repository.return_value.load.return_value = sentinel
+        load_codebook.return_value = sentinel
 
         _use_case, codebook = _build_encoder(VisualizeDocumentsArgs(), Mock())
 
         assert codebook is sentinel
-
-    @patch(f"{MODULE}.FileColorCodebookRepository")
-    @patch(f"{MODULE}.create_color_mapper")
-    def test_should_raise_when_codebook_not_found(self, _mapper: Mock, repository: Mock) -> None:
-        repository.return_value.load.return_value = None
-
-        with pytest.raises(FileNotFoundError, match="Codebook not found"):
-            _build_encoder(VisualizeDocumentsArgs(), Mock())
 
 
 class TestResolveParagraphsPerWork:

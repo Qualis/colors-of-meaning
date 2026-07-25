@@ -1,6 +1,42 @@
+from typing import Any, Callable, Dict, List, Tuple, Type
+
 import pytest
 
 from colors_of_meaning.domain.service.figure_renderer import FigureRenderer
+
+RENDER_METHOD_NAMES: Tuple[str, ...] = (
+    "render_codebook_palette",
+    "render_document_histograms",
+    "render_tsne_projection",
+    "render_confusion_matrix",
+    "render_corpus_signatures",
+    "render_rate_distortion",
+    "render_narrative_arc",
+    "render_a4_gallery",
+)
+
+
+def _accept_anything(_self: Any, *_args: Any, **_kwargs: Any) -> None:
+    return None
+
+
+def _renderer_implementing_all_but(omitted_method_name: str) -> Type[FigureRenderer]:
+    implementations: Dict[str, Callable[..., None]] = {
+        name: _accept_anything for name in RENDER_METHOD_NAMES if name != omitted_method_name
+    }
+    return type("PartialFigureRenderer", (FigureRenderer,), implementations)
+
+
+def _is_rejected_at_instantiation(renderer_type: Type[FigureRenderer]) -> bool:
+    try:
+        renderer_type()
+    except TypeError:
+        return True
+    return False
+
+
+def _method_names_rejected_when_omitted() -> List[str]:
+    return [name for name in RENDER_METHOD_NAMES if _is_rejected_at_instantiation(_renderer_implementing_all_but(name))]
 
 
 class TestFigureRenderer:
@@ -8,29 +44,8 @@ class TestFigureRenderer:
         with pytest.raises(TypeError):
             FigureRenderer()  # type: ignore
 
-    def test_should_define_render_codebook_palette_method(self) -> None:
-        assert hasattr(FigureRenderer, "render_codebook_palette")
-
-    def test_should_define_render_document_histograms_method(self) -> None:
-        assert hasattr(FigureRenderer, "render_document_histograms")
-
-    def test_should_define_render_tsne_projection_method(self) -> None:
-        assert hasattr(FigureRenderer, "render_tsne_projection")
-
-    def test_should_define_render_confusion_matrix_method(self) -> None:
-        assert hasattr(FigureRenderer, "render_confusion_matrix")
-
-    def test_should_define_render_corpus_signatures_method(self) -> None:
-        assert hasattr(FigureRenderer, "render_corpus_signatures")
-
-    def test_should_define_render_rate_distortion_method(self) -> None:
-        assert hasattr(FigureRenderer, "render_rate_distortion")
-
-    def test_should_define_render_narrative_arc_method(self) -> None:
-        assert hasattr(FigureRenderer, "render_narrative_arc")
-
-    def test_should_define_render_a4_gallery_method(self) -> None:
-        assert hasattr(FigureRenderer, "render_a4_gallery")
+    def test_should_reject_a_renderer_when_any_render_method_is_omitted(self) -> None:
+        assert _method_names_rejected_when_omitted() == list(RENDER_METHOD_NAMES)
 
     def test_should_allow_concrete_implementation(self) -> None:
         class ConcreteFigureRenderer(FigureRenderer):

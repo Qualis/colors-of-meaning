@@ -7,7 +7,6 @@ from colors_of_meaning.interface.cli.encode import (
     EncodeArgs,
     _load_documents,
     _setup_color_mapper,
-    _load_codebook,
     _create_use_case,
     _encode_documents,
     _save_documents,
@@ -41,31 +40,8 @@ class TestEncodeCLI:
         mock_mapper.load_weights.assert_called_once_with("model.pth")
         assert result == mock_mapper
 
-    @patch("colors_of_meaning.interface.cli.encode.FileColorCodebookRepository")
-    def test_should_load_codebook(self, mock_repo_class: Mock) -> None:
-        mock_repo = Mock()
-        mock_codebook = Mock()
-        mock_repo.load.return_value = mock_codebook
-        mock_repo_class.return_value = mock_repo
-
-        result = _load_codebook("test_codebook")
-
-        assert result == mock_codebook
-
-    @patch("colors_of_meaning.interface.cli.encode.FileColorCodebookRepository")
-    def test_should_raise_error_when_codebook_not_found(self, mock_repo_class: Mock) -> None:
-        mock_repo = Mock()
-        mock_repo.load.return_value = None
-        mock_repo_class.return_value = mock_repo
-
-        try:
-            _load_codebook("missing_codebook")
-            raise AssertionError("Should have raised FileNotFoundError")
-        except FileNotFoundError as e:
-            assert "not found" in str(e)
-
     @patch("colors_of_meaning.interface.cli.encode._setup_color_mapper")
-    @patch("colors_of_meaning.interface.cli.encode._load_codebook")
+    @patch("colors_of_meaning.interface.cli.encode.load_codebook")
     @patch("colors_of_meaning.interface.cli.encode.QuantizedColorMapper")
     @patch("colors_of_meaning.interface.cli.encode.EncodeDocumentUseCase")
     def test_should_create_use_case(

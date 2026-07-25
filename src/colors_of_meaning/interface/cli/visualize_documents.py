@@ -25,15 +25,13 @@ from colors_of_meaning.infrastructure.embedding.sentence_embedding_adapter impor
     SentenceEmbeddingAdapter,
 )
 from colors_of_meaning.infrastructure.ml.color_mapper_factory import create_color_mapper
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
 from colors_of_meaning.infrastructure.visualization.matplotlib_figure_renderer import (
     MatplotlibFigureRenderer,
 )
 from colors_of_meaning.infrastructure.visualization.pillow_document_image_renderer import (
     PillowDocumentImageRenderer,
 )
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 from colors_of_meaning.shared.document_corpus import (
     discover_author_works,
     extract_paragraphs,
@@ -78,9 +76,7 @@ def _build_encoder(
 ) -> Tuple[EncodeDocumentUseCase, ColorCodebook]:
     color_mapper = create_color_mapper(args.mapper_type, config)
     color_mapper.load_weights(args.model_path)
-    codebook = FileColorCodebookRepository().load(args.codebook_name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found: {args.codebook_name}")
+    codebook = load_codebook(args.codebook_name)
     return EncodeDocumentUseCase(QuantizedColorMapper(color_mapper, codebook)), codebook
 
 

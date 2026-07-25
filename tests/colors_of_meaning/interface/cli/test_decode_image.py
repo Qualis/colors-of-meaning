@@ -7,7 +7,6 @@ import pytest
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
 from colors_of_meaning.interface.cli.decode_image import (
     DecodeImageArgs,
-    _load_codebook,
     _load_corpus,
     _print_summary,
     main,
@@ -22,22 +21,6 @@ class TestDecodeImageArgs:
 
     def test_should_default_codebook_name(self) -> None:
         assert DecodeImageArgs().codebook_name == "codebook_4096"
-
-
-class TestLoadCodebook:
-    @patch(f"{MODULE}.FileColorCodebookRepository")
-    def test_should_return_codebook_when_found(self, mock_repo_class: Mock) -> None:
-        sentinel_codebook = Mock()
-        mock_repo_class.return_value.load.return_value = sentinel_codebook
-
-        assert _load_codebook("codebook_4096") is sentinel_codebook
-
-    @patch(f"{MODULE}.FileColorCodebookRepository")
-    def test_should_raise_when_codebook_not_found(self, mock_repo_class: Mock) -> None:
-        mock_repo_class.return_value.load.return_value = None
-
-        with pytest.raises(FileNotFoundError, match="Codebook not found"):
-            _load_codebook("missing")
 
 
 class TestLoadCorpus:
@@ -74,7 +57,7 @@ class TestDecodeImageMain:
     @patch(f"{MODULE}.CompareDocumentsUseCase")
     @patch(f"{MODULE}.WassersteinDistanceCalculator")
     @patch(f"{MODULE}._load_corpus")
-    @patch(f"{MODULE}._load_codebook")
+    @patch(f"{MODULE}.load_codebook")
     @patch("builtins.print")
     def test_should_decode_image_and_print_summary(
         self,

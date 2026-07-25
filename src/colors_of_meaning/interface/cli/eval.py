@@ -9,9 +9,6 @@ from colors_of_meaning.infrastructure.embedding.sentence_embedding_adapter impor
     SentenceEmbeddingAdapter,
 )
 from colors_of_meaning.infrastructure.ml.color_mapper_factory import create_color_mapper
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
 from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import (
     WassersteinDistanceCalculator,
 )
@@ -64,6 +61,7 @@ from colors_of_meaning.domain.model.evaluation_result import EvaluationResult
 from colors_of_meaning.domain.model.retrieval_evaluation import RetrievalEvaluation
 from colors_of_meaning.domain.repository.dataset_repository import DatasetRepository
 from colors_of_meaning.domain.service.retriever import Retriever
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 
 DistanceChoice = Literal["wasserstein", "sliced", "sinkhorn", "jensen_shannon"]
 DEFAULT_SINKHORN_REG = 1.0
@@ -150,9 +148,7 @@ def _build_color_components(args: EvalArgs, config: SynestheticConfig) -> tuple:
     embedding_adapter = SentenceEmbeddingAdapter()
     color_mapper = create_color_mapper(args.mapper_type, config)
     color_mapper.load_weights(args.model_path)
-    codebook = FileColorCodebookRepository().load(args.codebook_path)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found at {args.codebook_path}")
+    codebook = load_codebook(args.codebook_path)
     quantized_mapper = QuantizedColorMapper(color_mapper, codebook)
     encode_use_case = EncodeDocumentUseCase(quantized_mapper)
     distance_calculator = _create_distance_calculator(args.distance, codebook, config)

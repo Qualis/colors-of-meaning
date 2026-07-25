@@ -5,13 +5,9 @@ from typing import List
 
 import numpy as np
 
-from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
 from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import (
     WassersteinDistanceCalculator,
-)
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
 )
 from colors_of_meaning.infrastructure.visualization.pillow_document_image_renderer import (
     PillowDocumentImageRenderer,
@@ -23,6 +19,7 @@ from colors_of_meaning.application.use_case.decode_image_to_document_use_case im
     DecodeImageToDocumentUseCase,
     DocumentMatch,
 )
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 
 
 @dataclass
@@ -31,13 +28,6 @@ class DecodeImageArgs:
     codebook_name: str = "codebook_4096"
     encoded_documents: str = ""
     k: int = 5
-
-
-def _load_codebook(codebook_name: str) -> ColorCodebook:
-    codebook = FileColorCodebookRepository().load(codebook_name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found: {codebook_name}")
-    return codebook
 
 
 def _load_corpus(encoded_documents: str) -> List[ColoredDocument]:
@@ -57,7 +47,7 @@ def _print_summary(document: ColoredDocument, neighbors: List[DocumentMatch]) ->
 
 
 def main(args: DecodeImageArgs) -> None:
-    codebook = _load_codebook(args.codebook_name)
+    codebook = load_codebook(args.codebook_name)
     corpus = _load_corpus(args.encoded_documents)
 
     distance_calculator = WassersteinDistanceCalculator(codebook=codebook)

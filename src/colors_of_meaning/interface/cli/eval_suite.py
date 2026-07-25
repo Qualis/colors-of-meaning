@@ -66,9 +66,7 @@ from colors_of_meaning.infrastructure.ml.sliced_wasserstein_distance_calculator 
 from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import (
     WassersteinDistanceCalculator,
 )
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 from colors_of_meaning.interface.cli.eval import DistanceChoice, _create_distance_calculator
 from colors_of_meaning.shared.synesthetic_config import SynestheticConfig
 
@@ -110,13 +108,6 @@ def _setup_dataset(dataset_name: str) -> DatasetRepository:
         "newsgroups": NewsgroupsDatasetAdapter,
     }
     return adapters[dataset_name]()
-
-
-def _load_codebook(codebook_path: str) -> ColorCodebook:
-    codebook = FileColorCodebookRepository().load(codebook_path)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found at {codebook_path}")
-    return codebook
 
 
 def _encode_documents(
@@ -473,7 +464,7 @@ def main(args: EvalSuiteArgs) -> None:
     embedding_adapter = SentenceEmbeddingAdapter()
     color_mapper = create_color_mapper(args.mapper_type, config)
     color_mapper.load_weights(args.model_path)
-    codebook = _load_codebook(args.codebook_path)
+    codebook = load_codebook(args.codebook_path)
     _log_startup(args, config)
     fidelity = _run_fidelity_gate(args, config, embedding_adapter, color_mapper, codebook)
     factory = _build_evaluate_use_case_factory(args, config, embedding_adapter, color_mapper, codebook)

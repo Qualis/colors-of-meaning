@@ -86,37 +86,21 @@ class TestLoadCorpusParagraphs:
 class TestBuildEncoder:
     @patch(f"{MODULE}.EncodeDocumentUseCase")
     @patch(f"{MODULE}.QuantizedColorMapper")
-    @patch(f"{MODULE}.FileColorCodebookRepository")
+    @patch(f"{MODULE}.load_codebook")
     @patch(f"{MODULE}.PyTorchColorMapper")
     def test_should_return_codebook_when_it_exists(
         self,
         mock_mapper_class: Mock,
-        mock_repo_class: Mock,
+        mock_load_codebook: Mock,
         mock_quantized_class: Mock,
         mock_encode_class: Mock,
     ) -> None:
         sentinel_codebook = Mock()
-        mock_repo_class.return_value.load.return_value = sentinel_codebook
+        mock_load_codebook.return_value = sentinel_codebook
 
         _use_case, codebook = _build_encoder(Mock(), "model.pth", "codebook_4096")
 
         assert codebook is sentinel_codebook
-
-    @patch(f"{MODULE}.EncodeDocumentUseCase")
-    @patch(f"{MODULE}.QuantizedColorMapper")
-    @patch(f"{MODULE}.FileColorCodebookRepository")
-    @patch(f"{MODULE}.PyTorchColorMapper")
-    def test_should_raise_when_codebook_not_found(
-        self,
-        mock_mapper_class: Mock,
-        mock_repo_class: Mock,
-        mock_quantized_class: Mock,
-        mock_encode_class: Mock,
-    ) -> None:
-        mock_repo_class.return_value.load.return_value = None
-
-        with pytest.raises(FileNotFoundError, match="Codebook not found"):
-            _build_encoder(Mock(), "model.pth", "missing")
 
 
 class TestEncodeCorpora:

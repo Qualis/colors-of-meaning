@@ -30,7 +30,6 @@ from colors_of_meaning.interface.cli.grounding import (
     _create_distance_calculator,
     _encode,
     _flagged_count,
-    _load_codebook,
     _load_sample,
     _print_table,
     _provenance_line,
@@ -109,23 +108,6 @@ class TestLoadSample:
         assert [answer.answer_id for answer in answers] == ["grounded", "off_context"]
 
 
-class TestLoadCodebook:
-    def test_should_return_the_loaded_codebook(self) -> None:
-        with patch(f"{MODULE}.FileColorCodebookRepository") as repo:
-            repo.return_value.load.return_value = ColorCodebook.create_uniform_grid(bins_per_dimension=2)
-
-            codebook = _load_codebook("codebook_4096")
-
-        assert codebook.num_bins == 8
-
-    def test_should_raise_when_codebook_is_missing(self) -> None:
-        with patch(f"{MODULE}.FileColorCodebookRepository") as repo:
-            repo.return_value.load.return_value = None
-
-            with pytest.raises(FileNotFoundError, match="Codebook not found"):
-                _load_codebook("absent")
-
-
 class TestBuildMapper:
     def test_should_load_weights_from_the_model_path(self) -> None:
         with patch(f"{MODULE}.create_color_mapper"):
@@ -180,7 +162,7 @@ class TestBuildPipeline:
         with ExitStack() as stack:
             stack.enter_context(patch(f"{MODULE}.SentenceEmbeddingAdapter"))
             stack.enter_context(patch(f"{MODULE}._build_mapper"))
-            stack.enter_context(patch(f"{MODULE}._load_codebook"))
+            stack.enter_context(patch(f"{MODULE}.load_codebook"))
             stack.enter_context(patch(f"{MODULE}._create_distance_calculator"))
             pipeline = _build_pipeline(GroundingArgs(), _config())
 

@@ -254,7 +254,7 @@ class TestVisualizeCLIUnknownType:
 class TestEncodeSamples:
     @patch("colors_of_meaning.interface.cli.visualize.EncodeDocumentUseCase")
     @patch("colors_of_meaning.interface.cli.visualize.QuantizedColorMapper")
-    @patch("colors_of_meaning.interface.cli.visualize.FileColorCodebookRepository")
+    @patch("colors_of_meaning.interface.cli.visualize.load_codebook")
     @patch("colors_of_meaning.interface.cli.visualize.PyTorchColorMapper")
     @patch("colors_of_meaning.interface.cli.visualize.SentenceEmbeddingAdapter")
     @patch("builtins.print")
@@ -263,7 +263,7 @@ class TestEncodeSamples:
         mock_print: Mock,
         mock_embedding_class: Mock,
         mock_mapper_class: Mock,
-        mock_repo_class: Mock,
+        mock_load_codebook: Mock,
         mock_quantized_class: Mock,
         mock_encode_class: Mock,
     ) -> None:
@@ -284,9 +284,7 @@ class TestEncodeSamples:
         mock_mapper_class.return_value = mock_mapper
 
         mock_codebook = Mock()
-        mock_repo = Mock()
-        mock_repo.load.return_value = mock_codebook
-        mock_repo_class.return_value = mock_repo
+        mock_load_codebook.return_value = mock_codebook
 
         mock_encode = Mock()
         mock_doc = Mock()
@@ -302,7 +300,7 @@ class TestEncodeSamples:
 
     @patch("colors_of_meaning.interface.cli.visualize.EncodeDocumentUseCase")
     @patch("colors_of_meaning.interface.cli.visualize.QuantizedColorMapper")
-    @patch("colors_of_meaning.interface.cli.visualize.FileColorCodebookRepository")
+    @patch("colors_of_meaning.interface.cli.visualize.load_codebook")
     @patch("colors_of_meaning.interface.cli.visualize.PyTorchColorMapper")
     @patch("colors_of_meaning.interface.cli.visualize.SentenceEmbeddingAdapter")
     @patch("builtins.print")
@@ -311,7 +309,7 @@ class TestEncodeSamples:
         mock_print: Mock,
         mock_embedding_class: Mock,
         mock_mapper_class: Mock,
-        mock_repo_class: Mock,
+        mock_load_codebook: Mock,
         mock_quantized_class: Mock,
         mock_encode_class: Mock,
     ) -> None:
@@ -328,9 +326,7 @@ class TestEncodeSamples:
         mock_embedding.encode_document_sentences.return_value = Mock()
         mock_embedding_class.return_value = mock_embedding
 
-        mock_repo = Mock()
-        mock_repo.load.return_value = Mock()
-        mock_repo_class.return_value = mock_repo
+        mock_load_codebook.return_value = Mock()
 
         mock_encode = Mock()
         mock_encode.execute.return_value = Mock()
@@ -340,35 +336,6 @@ class TestEncodeSamples:
         _encode_samples(samples, mock_config, "model.pth", "codebook")
 
         mock_print.assert_called_once_with("  Encoded 100/100 documents")
-
-    @patch("colors_of_meaning.interface.cli.visualize.EncodeDocumentUseCase")
-    @patch("colors_of_meaning.interface.cli.visualize.QuantizedColorMapper")
-    @patch("colors_of_meaning.interface.cli.visualize.FileColorCodebookRepository")
-    @patch("colors_of_meaning.interface.cli.visualize.PyTorchColorMapper")
-    @patch("colors_of_meaning.interface.cli.visualize.SentenceEmbeddingAdapter")
-    def test_should_raise_when_codebook_not_found(
-        self,
-        mock_embedding_class: Mock,
-        mock_mapper_class: Mock,
-        mock_repo_class: Mock,
-        mock_quantized_class: Mock,
-        mock_encode_class: Mock,
-    ) -> None:
-        from colors_of_meaning.interface.cli.visualize import _encode_samples
-
-        mock_config = Mock()
-        mock_config.projector.embedding_dim = 384
-        mock_config.projector.hidden_dim_1 = 128
-        mock_config.projector.hidden_dim_2 = 64
-        mock_config.projector.dropout_rate = 0.1
-        mock_config.training.device = "cpu"
-
-        mock_repo = Mock()
-        mock_repo.load.return_value = None
-        mock_repo_class.return_value = mock_repo
-
-        with pytest.raises(FileNotFoundError, match="Codebook not found"):
-            _encode_samples([Mock()], mock_config, "model.pth", "missing")
 
 
 class TestCreateClassifier:
@@ -403,7 +370,7 @@ class TestCreateClassifier:
 
     @patch("colors_of_meaning.interface.cli.visualize.EncodeDocumentUseCase")
     @patch("colors_of_meaning.interface.cli.visualize.QuantizedColorMapper")
-    @patch("colors_of_meaning.interface.cli.visualize.FileColorCodebookRepository")
+    @patch("colors_of_meaning.interface.cli.visualize.load_codebook")
     @patch("colors_of_meaning.interface.cli.visualize.PyTorchColorMapper")
     @patch("colors_of_meaning.interface.cli.visualize.SentenceEmbeddingAdapter")
     @patch("colors_of_meaning.interface.cli.visualize.ColorHistogramClassifier")
@@ -414,7 +381,7 @@ class TestCreateClassifier:
         mock_color_classifier_class: Mock,
         mock_embedding_class: Mock,
         mock_mapper_class: Mock,
-        mock_repo_class: Mock,
+        mock_load_codebook: Mock,
         mock_quantized_class: Mock,
         mock_encode_class: Mock,
     ) -> None:
@@ -428,9 +395,7 @@ class TestCreateClassifier:
         mock_config.training.device = "cpu"
 
         mock_codebook = Mock()
-        mock_repo = Mock()
-        mock_repo.load.return_value = mock_codebook
-        mock_repo_class.return_value = mock_repo
+        mock_load_codebook.return_value = mock_codebook
 
         mock_classifier = Mock()
         mock_color_classifier_class.return_value = mock_classifier
@@ -442,33 +407,6 @@ class TestCreateClassifier:
         mock_wasserstein_class.assert_called_once_with(
             codebook=mock_codebook, sinkhorn_reg=mock_config.distance.sinkhorn_reg
         )
-
-    @patch("colors_of_meaning.interface.cli.visualize.FileColorCodebookRepository")
-    @patch("colors_of_meaning.interface.cli.visualize.PyTorchColorMapper")
-    @patch("colors_of_meaning.interface.cli.visualize.SentenceEmbeddingAdapter")
-    def test_should_raise_when_codebook_not_found_for_classifier(
-        self,
-        mock_embedding_class: Mock,
-        mock_mapper_class: Mock,
-        mock_repo_class: Mock,
-    ) -> None:
-        from colors_of_meaning.interface.cli.visualize import _create_classifier
-
-        mock_config = Mock()
-        mock_config.projector.embedding_dim = 384
-        mock_config.projector.hidden_dim_1 = 128
-        mock_config.projector.hidden_dim_2 = 64
-        mock_config.projector.dropout_rate = 0.1
-        mock_config.training.device = "cpu"
-
-        mock_repo = Mock()
-        mock_repo.load.return_value = None
-        mock_repo_class.return_value = mock_repo
-
-        args = VisualizeArgs(method="color")
-
-        with pytest.raises(FileNotFoundError, match="Codebook not found"):
-            _create_classifier(args, mock_config)
 
     def test_should_raise_for_unknown_method(self) -> None:
         from colors_of_meaning.interface.cli.visualize import _create_classifier

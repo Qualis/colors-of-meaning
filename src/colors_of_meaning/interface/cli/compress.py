@@ -9,9 +9,6 @@ from colors_of_meaning.application.use_case.compression_comparison_use_case impo
     CompressionComparisonUseCase,
 )
 from colors_of_meaning.infrastructure.ml.pytorch_color_mapper import PyTorchColorMapper
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
 from colors_of_meaning.infrastructure.ml.gzip_compression_baseline import (
     GzipCompressionBaseline,
 )
@@ -21,6 +18,7 @@ from colors_of_meaning.infrastructure.ml.pq_compression_baseline import (
 from colors_of_meaning.infrastructure.ml.color_vq_compression_baseline import (
     ColorVqCompressionBaseline,
 )
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 
 DELTA_E_METHOD = "color_vq"
 
@@ -32,13 +30,6 @@ class CompressArgs:
     model_path: str = "artifacts/models/projector.pth"
     codebook_name: str = "codebook_4096"
     compare_baselines: bool = False
-
-
-def _load_codebook(codebook_name: str) -> ColorCodebook:
-    codebook = FileColorCodebookRepository().load(codebook_name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found: {codebook_name}")
-    return codebook
 
 
 def _setup_color_mapper(config: SynestheticConfig, model_path: str) -> PyTorchColorMapper:
@@ -69,7 +60,7 @@ def _original_basis(method: str) -> str:
 
 def _run_vq_analysis(args: CompressArgs) -> None:
     config = SynestheticConfig.from_yaml(args.config)
-    codebook = _load_codebook(args.codebook_name)
+    codebook = load_codebook(args.codebook_name)
     baseline = _build_color_vq_baseline(config, args, codebook)
 
     print(f"Loading embeddings from {args.embeddings_path}...")
@@ -91,7 +82,7 @@ def _run_vq_analysis(args: CompressArgs) -> None:
 
 def _run_baseline_comparison(args: CompressArgs) -> None:
     config = SynestheticConfig.from_yaml(args.config)
-    codebook = _load_codebook(args.codebook_name)
+    codebook = load_codebook(args.codebook_name)
 
     print(f"Loading embeddings from {args.embeddings_path}...")
     embeddings = np.load(args.embeddings_path)

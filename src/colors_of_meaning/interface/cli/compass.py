@@ -26,12 +26,10 @@ from colors_of_meaning.infrastructure.ml.sliced_wasserstein_distance_calculator 
 from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import (
     WassersteinDistanceCalculator,
 )
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
 from colors_of_meaning.infrastructure.visualization.matplotlib_figure_renderer import (
     MatplotlibFigureRenderer,
 )
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 from colors_of_meaning.shared.outline_parser import parse_outline
 from colors_of_meaning.shared.synesthetic_config import SynestheticConfig
 
@@ -59,13 +57,6 @@ def _read_outline(outline_path: str, min_beat_chars: int) -> List[NarrativeBeat]
     return parse_outline(text, min_beat_chars)
 
 
-def _load_codebook(codebook_name: str) -> ColorCodebook:
-    codebook = FileColorCodebookRepository().load(codebook_name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found: {codebook_name}")
-    return codebook
-
-
 def _build_mapper(args: CompassArgs, config: SynestheticConfig) -> ColorMapper:
     mapper = create_color_mapper(_MAPPER_TYPES[args.mapper], config)
     mapper.load_weights(args.model_path)
@@ -83,7 +74,7 @@ def _create_distance_calculator(metric: str, codebook: ColorCodebook, config: Sy
 
 
 def _build_use_case(args: CompassArgs, config: SynestheticConfig) -> AnalyzeNarrativeArcUseCase:
-    codebook = _load_codebook(args.codebook_name)
+    codebook = load_codebook(args.codebook_name)
     return AnalyzeNarrativeArcUseCase(
         embedding=SentenceEmbeddingAdapter(),
         structured_mapper=_build_mapper(args, config),

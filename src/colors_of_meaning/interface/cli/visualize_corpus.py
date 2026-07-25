@@ -12,9 +12,6 @@ from colors_of_meaning.infrastructure.embedding.sentence_embedding_adapter impor
     SentenceEmbeddingAdapter,
 )
 from colors_of_meaning.infrastructure.ml.pytorch_color_mapper import PyTorchColorMapper
-from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
-    FileColorCodebookRepository,
-)
 from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
 from colors_of_meaning.domain.service.color_mapper import QuantizedColorMapper
@@ -27,6 +24,7 @@ from colors_of_meaning.application.use_case.visualize_documents_use_case import 
 from colors_of_meaning.infrastructure.visualization.matplotlib_figure_renderer import (
     MatplotlibFigureRenderer,
 )
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 
 
 @dataclass
@@ -66,9 +64,7 @@ def _build_encoder(
         device=config.training.device,
     )
     color_mapper.load_weights(model_path)
-    codebook = FileColorCodebookRepository().load(codebook_name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found: {codebook_name}")
+    codebook = load_codebook(codebook_name)
     return EncodeDocumentUseCase(QuantizedColorMapper(color_mapper, codebook)), codebook
 
 

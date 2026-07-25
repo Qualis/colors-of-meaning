@@ -48,6 +48,7 @@ from colors_of_meaning.domain.model.colored_document import ColoredDocument
 from colors_of_meaning.domain.model.evaluation_sample import EvaluationSample
 from colors_of_meaning.domain.repository.dataset_repository import DatasetRepository
 from colors_of_meaning.domain.service.color_mapper import QuantizedColorMapper
+from colors_of_meaning.interface.cli.codebook_loading import load_codebook
 
 
 @dataclass
@@ -89,9 +90,7 @@ def _encode_samples(
         device=config.training.device,
     )
     color_mapper.load_weights(model_path)
-    codebook = FileColorCodebookRepository().load(codebook_name)
-    if codebook is None:
-        raise FileNotFoundError(f"Codebook not found: {codebook_name}")
+    codebook = load_codebook(codebook_name)
     quantized_mapper = QuantizedColorMapper(color_mapper, codebook)
     encode_use_case = EncodeDocumentUseCase(quantized_mapper)
 
@@ -185,9 +184,7 @@ def _create_classifier(args: VisualizeArgs, config: SynestheticConfig) -> Classi
             device=config.training.device,
         )
         color_mapper.load_weights(args.model_path)
-        codebook = FileColorCodebookRepository().load(args.codebook_name)
-        if codebook is None:
-            raise FileNotFoundError(f"Codebook not found: {args.codebook_name}")
+        codebook = load_codebook(args.codebook_name)
         quantized_mapper = QuantizedColorMapper(color_mapper, codebook)
         encode_use_case = EncodeDocumentUseCase(quantized_mapper)
         distance_calculator = WassersteinDistanceCalculator(

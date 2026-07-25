@@ -58,13 +58,12 @@ def _run_color_classifier_with_mocked_factory(mapper_type: str) -> tuple:
     with ExitStack() as stack:
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval.SentenceEmbeddingAdapter"))
         mock_create_mapper = stack.enter_context(patch("colors_of_meaning.interface.cli.eval.create_color_mapper"))
-        mock_repo_class = stack.enter_context(patch("colors_of_meaning.interface.cli.eval.FileColorCodebookRepository"))
+        stack.enter_context(patch("colors_of_meaning.interface.cli.eval.load_codebook"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval.WassersteinDistanceCalculator"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval.EncodeDocumentUseCase"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval.ColorHistogramClassifier"))
         stack.enter_context(patch("colors_of_meaning.domain.service.color_mapper.QuantizedColorMapper"))
         stack.enter_context(patch("builtins.print"))
-        mock_repo_class.return_value.load.return_value = Mock()
         mock_mapper = Mock()
         mock_create_mapper.return_value = mock_mapper
         _create_color_classifier(args, config)
@@ -247,7 +246,7 @@ class TestEvalCLI:
     @patch("colors_of_meaning.interface.cli.eval.SklearnMetricsCalculator")
     @patch("colors_of_meaning.interface.cli.eval.SentenceEmbeddingAdapter")
     @patch("colors_of_meaning.interface.cli.eval.create_color_mapper")
-    @patch("colors_of_meaning.interface.cli.eval.FileColorCodebookRepository")
+    @patch("colors_of_meaning.interface.cli.eval.load_codebook")
     @patch("colors_of_meaning.interface.cli.eval.WassersteinDistanceCalculator")
     @patch("colors_of_meaning.interface.cli.eval.EncodeDocumentUseCase")
     @patch("colors_of_meaning.domain.service.color_mapper.QuantizedColorMapper")
@@ -258,7 +257,7 @@ class TestEvalCLI:
         mock_quantized_mapper_class: Mock,
         mock_encode_use_case_class: Mock,
         mock_distance_calc_class: Mock,
-        mock_codebook_repo_class: Mock,
+        mock_load_codebook: Mock,
         mock_create_color_mapper: Mock,
         mock_embedding_adapter_class: Mock,
         mock_metrics_class: Mock,
@@ -286,9 +285,7 @@ class TestEvalCLI:
         mock_create_color_mapper.return_value = mock_color_mapper
 
         mock_codebook = Mock()
-        mock_codebook_repo = Mock()
-        mock_codebook_repo.load.return_value = mock_codebook
-        mock_codebook_repo_class.return_value = mock_codebook_repo
+        mock_load_codebook.return_value = mock_codebook
 
         mock_quantized_mapper = Mock()
         mock_quantized_mapper_class.return_value = mock_quantized_mapper
@@ -326,51 +323,6 @@ class TestEvalCLI:
         assert mock_use_case.execute.call_args[1]["bits_per_token"] == 12.0
         print_calls = [str(call) for call in mock_print.call_args_list]
         assert any("Bits per token" in str(call) for call in print_calls)
-
-    @patch("colors_of_meaning.interface.cli.eval.SynestheticConfig")
-    @patch("colors_of_meaning.interface.cli.eval.AGNewsDatasetAdapter")
-    @patch("colors_of_meaning.interface.cli.eval.SentenceEmbeddingAdapter")
-    @patch("colors_of_meaning.interface.cli.eval.create_color_mapper")
-    @patch("colors_of_meaning.interface.cli.eval.FileColorCodebookRepository")
-    @patch("colors_of_meaning.domain.service.color_mapper.QuantizedColorMapper")
-    def test_should_raise_error_when_codebook_not_found(
-        self,
-        mock_quantized_mapper_class: Mock,
-        mock_codebook_repo_class: Mock,
-        mock_create_color_mapper: Mock,
-        mock_embedding_adapter_class: Mock,
-        mock_dataset_class: Mock,
-        mock_config_class: Mock,
-        tmp_path: Path,
-    ) -> None:
-        mock_config = Mock()
-        mock_config.projector.embedding_dim = 384
-        mock_config.projector.hidden_dim_1 = 512
-        mock_config.projector.hidden_dim_2 = 256
-        mock_config.projector.dropout_rate = 0.1
-        mock_config.training.device = "cpu"
-        mock_config_class.from_yaml.return_value = mock_config
-
-        mock_dataset = Mock()
-        mock_dataset_class.return_value = mock_dataset
-
-        mock_embedding_adapter = Mock()
-        mock_embedding_adapter_class.return_value = mock_embedding_adapter
-
-        mock_color_mapper = Mock()
-        mock_create_color_mapper.return_value = mock_color_mapper
-
-        mock_codebook_repo = Mock()
-        mock_codebook_repo.load.return_value = None
-        mock_codebook_repo_class.return_value = mock_codebook_repo
-
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("dummy")
-
-        args = EvalArgs(config=str(config_path), dataset="ag_news", method="color")
-
-        with pytest.raises(FileNotFoundError, match="Codebook not found"):
-            main(args)
 
     @patch("colors_of_meaning.interface.cli.eval.SynestheticConfig")
     @patch("colors_of_meaning.interface.cli.eval.AGNewsDatasetAdapter")
@@ -525,8 +477,7 @@ def _create_color_retriever_with_mocked_factory() -> tuple:
     with ExitStack() as stack:
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval.SentenceEmbeddingAdapter"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval.create_color_mapper"))
-        repo_class = stack.enter_context(patch("colors_of_meaning.interface.cli.eval.FileColorCodebookRepository"))
-        repo_class.return_value.load.return_value = Mock()
+        stack.enter_context(patch("colors_of_meaning.interface.cli.eval.load_codebook"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval.WassersteinDistanceCalculator"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval.EncodeDocumentUseCase"))
         retriever_class = stack.enter_context(patch("colors_of_meaning.interface.cli.eval.ColorHistogramRetriever"))

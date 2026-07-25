@@ -26,7 +26,6 @@ from colors_of_meaning.interface.cli.compass import (
     _build_use_case,
     _create_distance_calculator,
     _drift_cell,
-    _load_codebook,
     _provenance_line,
     _print_table,
     _read_outline,
@@ -72,23 +71,6 @@ class TestReadOutline:
         beats = _read_outline(str(outline), min_beat_chars=50)
 
         assert len(beats) == 2
-
-
-class TestLoadCodebook:
-    def test_should_return_the_loaded_codebook(self) -> None:
-        with patch(f"{MODULE}.FileColorCodebookRepository") as repo:
-            repo.return_value.load.return_value = ColorCodebook.create_uniform_grid(bins_per_dimension=2)
-
-            codebook = _load_codebook("codebook_4096")
-
-        assert codebook.num_bins == 8
-
-    def test_should_raise_when_codebook_is_missing(self) -> None:
-        with patch(f"{MODULE}.FileColorCodebookRepository") as repo:
-            repo.return_value.load.return_value = None
-
-            with pytest.raises(FileNotFoundError, match="Codebook not found"):
-                _load_codebook("absent")
 
 
 class TestBuildMapper:
@@ -145,7 +127,7 @@ class TestBuildUseCase:
         with ExitStack() as stack:
             stack.enter_context(patch(f"{MODULE}.SentenceEmbeddingAdapter"))
             stack.enter_context(patch(f"{MODULE}._build_mapper"))
-            stack.enter_context(patch(f"{MODULE}._load_codebook"))
+            stack.enter_context(patch(f"{MODULE}.load_codebook"))
             stack.enter_context(patch(f"{MODULE}._create_distance_calculator"))
             use_case_class = stack.enter_context(patch(f"{MODULE}.AnalyzeNarrativeArcUseCase"))
             use_case = _build_use_case(CompassArgs(), _config())
