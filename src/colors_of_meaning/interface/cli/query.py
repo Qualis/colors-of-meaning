@@ -43,7 +43,7 @@ def _parse_palette(palette_json: str) -> list:
 def main(args: QueryArgs) -> None:
     print(f"Loading encoded documents from {args.encoded_documents}...")
     with open(args.encoded_documents, "rb") as f:
-        documents: List[ColoredDocument] = pickle.load(f)  # nosec B301 nosemgrep
+        documents: List[ColoredDocument] = pickle.load(f)  # nosec B301  # nosemgrep
 
     print(f"Loading codebook {args.codebook_name}...")
     codebook = load_codebook(args.codebook_name)

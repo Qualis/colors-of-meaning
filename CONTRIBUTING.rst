@@ -82,6 +82,11 @@ Edit the abstract requirement in ``pyproject.toml``, then regenerate and commit 
 carries a CUDA stack the CPU-only gate cannot use, and is held at a fixed version for
 reproducibility of the committed evaluation results; see ``docs/security/audit-suppressions.md``.
 
+Because that index redirects to PyTorch's CDN, ``uv.lock`` records the resolved wheel URLs on
+``download-r2.pytorch.org`` rather than the ``download.pytorch.org`` URL configured above. If
+those URLs ever stop resolving, the fix is ``uv lock`` to re-resolve them — not a change to
+``[[tool.uv.index]]``.
+
 .. note::
 
    The lock is **CPU-only on every platform** — that is deliberate, since the gate and CI have no

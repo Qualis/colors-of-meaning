@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+upstream_torch_version="$(python -c 'from importlib.metadata import version; print(version("torch").split("+")[0])')"
+
+pin_file="$(mktemp)"
+trap 'rm -f "${pin_file}"' EXIT
+
+printf 'torch==%s\n' "${upstream_torch_version}" > "${pin_file}"
+
+pip-audit --no-deps --requirement "${pin_file}" "$@"

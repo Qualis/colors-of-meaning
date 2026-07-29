@@ -81,7 +81,7 @@ def _load_corpus(corpus_path: Optional[str] = None) -> Optional[List[ColoredDocu
     resolved_path = corpus_path or CORPUS_ARTIFACT_PATH
     try:
         with open(resolved_path, "rb") as artifact:
-            return cast(List[ColoredDocument], pickle.load(artifact))  # nosec B301 nosemgrep
+            return cast(List[ColoredDocument], pickle.load(artifact))  # nosec B301  # nosemgrep
     except FileNotFoundError:
         logger.warning(
             "Encoded corpus artifact absent; query endpoint degraded",

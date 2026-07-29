@@ -40,7 +40,7 @@ def main(args: CompareArgs) -> None:
 
     print(f"Loading encoded documents from {args.encoded_documents}...")
     with open(args.encoded_documents, "rb") as f:
-        documents: List[ColoredDocument] = pickle.load(f)  # nosec B301 nosemgrep
+        documents: List[ColoredDocument] = pickle.load(f)  # nosec B301  # nosemgrep
 
     if args.query_index >= len(documents):
         raise ValueError(f"Query index {args.query_index} out of range")

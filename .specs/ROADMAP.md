@@ -38,7 +38,7 @@ This roadmap fixes the chain end-to-end (P0), then addresses the blog's secondar
 
 A task is complete only when:
 
-- [ ] `tox` is green — all gates pass (flake8, black, bandit, semgrep, xenon, radon, mypy, pip-audit).
+- [ ] `tox` is green — all gates pass (ruff check, ruff format, bandit, semgrep, xenon, radon, mypy, pip-audit).
 - [ ] Coverage remains **100%**; new tests are meaningful, **one logical assertion each**, named `test_should_..._when_...`.
 - [ ] **No comments**; code is self-documenting.
 - [ ] Layer boundaries respected — domain stays pure (no `sklearn`/`torch`/`ot` imports in `domain/`); new adapters live in `infrastructure/` behind a `domain/service` port and are wired with Lagom.

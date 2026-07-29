@@ -521,9 +521,11 @@ Both are committed. There is no `setup.cfg`, `setup.py`, or `requirements.lock`.
   `uv sync --locked`, which FAILS if the lock is stale — do not work around it with `--frozen`.
 - `torch` resolves from an explicit PyTorch CPU index via `[tool.uv.sources]`; do NOT add
   `nvidia-*` or `triton` pins to make the lock portable.
-- `tox` requires **tox 4** with the `tox-uv` plugin. Every environment is built by `uv` from the
-  lock, EXCEPT `build`/`clean`/`publish`, which use `runner = uv-venv-runner` with `deps` because
-  the lock runner ignores `deps`. The `--python 3.11` above is what makes a local gate run match CI.
+- `tox` requires **tox 4** with the `tox-uv` plugin. Every environment installs from `uv.lock` —
+  `build`/`publish` via `only_groups` against `[dependency-groups]`, the rest via `extras`. Only
+  `clean` opts out (`runner = uv-venv-runner`), because it installs nothing at all. Never add a
+  bare `deps` to a lock-runner env: it is silently ignored. The `--python 3.11` above is what
+  makes a local gate run match CI.
 
 ### Module Structure
 

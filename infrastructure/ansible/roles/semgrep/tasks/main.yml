@@ -1,6 +1,6 @@
 - name: Install semgrep
   ansible.builtin.command:
-    cmd: pipx install semgrep
+    cmd: pipx install semgrep==1.164.0
     creates: ~/.local/bin/semgrep
   register: semgrep_install
   retries: 3

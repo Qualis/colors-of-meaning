@@ -34,7 +34,7 @@ def _load_corpus(encoded_documents: str) -> List[ColoredDocument]:
     if not encoded_documents:
         return []
     with open(encoded_documents, "rb") as f:
-        corpus: List[ColoredDocument] = pickle.load(f)  # nosec B301 nosemgrep
+        corpus: List[ColoredDocument] = pickle.load(f)  # nosec B301  # nosemgrep
     return corpus
 
 

@@ -24,7 +24,7 @@ class FileColorCodebookRepository(ColorCodebookRepository):
             return None
 
         with open(file_path, "rb") as f:
-            return cast(ColorCodebook, pickle.load(f))  # nosec B301 nosemgrep
+            return cast(ColorCodebook, pickle.load(f))  # nosec B301  # nosemgrep
 
     def exists(self, name: str) -> bool:
         return self._get_file_path(name).exists()
