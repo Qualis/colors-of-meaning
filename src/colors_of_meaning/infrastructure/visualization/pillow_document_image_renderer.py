@@ -64,7 +64,7 @@ class PillowDocumentImageRenderer(DocumentImageRenderer):
         sequence = document.color_sequence or []
         if len(sequence) > len(boxes):
             raise ValueError(f"score layout needs {len(sequence)} cells but the A4 canvas fits {len(boxes)}")
-        for bin_index, box in zip(sequence, boxes):
+        for bin_index, box in zip(sequence, boxes, strict=False):
             draw.rectangle(box, fill=lab_to_rgb(codebook.get_color(bin_index)))
 
     def _render_signature(self, image: Image.Image, document: ColoredDocument, codebook: ColorCodebook) -> None:

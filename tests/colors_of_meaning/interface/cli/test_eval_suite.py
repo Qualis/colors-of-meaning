@@ -308,9 +308,9 @@ class TestEvalSuiteFidelityGate:
         with ExitStack() as stack:
             dataset = Mock()
             dataset.get_samples.return_value = [Mock(text="a."), Mock(text="b.")]
-            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._setup_dataset")).return_value = (
-                dataset
-            )
+            stack.enter_context(
+                patch("colors_of_meaning.interface.cli.eval_suite._setup_dataset")
+            ).return_value = dataset
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.QuantizedColorMapper"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.EncodeDocumentUseCase"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._encode_documents")).return_value = [
@@ -447,9 +447,9 @@ def _run_main(tmp_path: Path, fidelity: DistanceFidelity, evaluated: List[Evalua
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.SentenceEmbeddingAdapter"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.create_color_mapper"))
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.load_codebook"))
-        stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")).return_value = (
-            fidelity
-        )
+        stack.enter_context(
+            patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")
+        ).return_value = fidelity
         stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._build_evaluate_use_case_factory"))
         suite_class = stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.EvaluationSuiteUseCase"))
         suite_class.return_value.execute.return_value = evaluated
@@ -481,9 +481,9 @@ class TestEvalSuiteMain:
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.SentenceEmbeddingAdapter"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.create_color_mapper"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.load_codebook"))
-            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")).return_value = (
-                _fidelity(is_faithful=True)
-            )
+            stack.enter_context(
+                patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")
+            ).return_value = _fidelity(is_faithful=True)
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._build_evaluate_use_case_factory"))
             suite_class = stack.enter_context(
                 patch("colors_of_meaning.interface.cli.eval_suite.EvaluationSuiteUseCase")
@@ -506,9 +506,9 @@ class TestEvalSuiteMain:
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.SentenceEmbeddingAdapter"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.create_color_mapper"))
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite.load_codebook"))
-            stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")).return_value = (
-                _fidelity(is_faithful=False)
-            )
+            stack.enter_context(
+                patch("colors_of_meaning.interface.cli.eval_suite._run_fidelity_gate")
+            ).return_value = _fidelity(is_faithful=False)
             stack.enter_context(patch("colors_of_meaning.interface.cli.eval_suite._build_evaluate_use_case_factory"))
             suite_class = stack.enter_context(
                 patch("colors_of_meaning.interface.cli.eval_suite.EvaluationSuiteUseCase")

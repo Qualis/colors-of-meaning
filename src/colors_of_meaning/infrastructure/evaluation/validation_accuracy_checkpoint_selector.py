@@ -58,5 +58,7 @@ class ValidationAccuracyCheckpointSelector:
 
     @staticmethod
     def _accuracy(true_labels: npt.NDArray, predictions: List[int]) -> float:
-        correct = sum(1 for true_label, prediction in zip(true_labels, predictions) if int(true_label) == prediction)
+        correct = sum(
+            1 for true_label, prediction in zip(true_labels, predictions, strict=True) if int(true_label) == prediction
+        )
         return correct / len(predictions)

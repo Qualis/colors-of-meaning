@@ -369,11 +369,14 @@ class TestSupervisedMapperInSynestheticConfig:
         assert isinstance(config.supervised_mapper, SupervisedMapperConfig)
 
     def test_should_load_supervised_mapper_from_yaml(self, tmp_path: Path) -> None:
-        yaml_content = _create_test_yaml_content() + """
+        yaml_content = (
+            _create_test_yaml_content()
+            + """
 supervised_mapper:
   classification_weight: 0.5
   num_classes: 10
 """
+        )
         config_path = tmp_path / "config.yaml"
         config_path.write_text(yaml_content)
 

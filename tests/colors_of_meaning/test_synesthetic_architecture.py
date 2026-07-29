@@ -117,8 +117,8 @@ def test_should_keep_pillow_out_of_domain_data_modules() -> None:
             "colors_of_meaning.domain.service.data_image_codec",
         )
         .should(
-            lambda module, direct_imports, all_imports: not any(
-                imported == "PIL" or imported.startswith("PIL.") for imported in direct_imports
+            lambda module, direct_imports, all_imports: (
+                not any(imported == "PIL" or imported.startswith("PIL.") for imported in direct_imports)
             ),
             "no_pillow_import",
         )
@@ -379,8 +379,9 @@ def test_should_not_have_circular_dependencies() -> None:
         )
         .match("colors_of_meaning.*")
         .should(
-            lambda module, direct_imports, all_imports: module not in direct_imports
-            and module not in all_imports.get(module, set()),
+            lambda module, direct_imports, all_imports: (
+                module not in direct_imports and module not in all_imports.get(module, set())
+            ),
             "no_circular_dependencies",
         )
         .check("colors_of_meaning")

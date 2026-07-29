@@ -479,9 +479,9 @@ class TestColorHistogramClassifier:
         classifier.fit(train_samples)
         predictions = classifier.predict(test_samples)
 
-        accuracy = sum(int(prediction == sample.label) for prediction, sample in zip(predictions, test_samples)) / len(
-            test_samples
-        )
+        accuracy = sum(
+            int(prediction == sample.label) for prediction, sample in zip(predictions, test_samples, strict=True)
+        ) / len(test_samples)
         assert accuracy >= 0.8, f"color pipeline accuracy {accuracy} below floor 0.8 (chance 0.5)"
 
     def test_should_delegate_to_a_shared_retrieval_core(

@@ -150,7 +150,7 @@ def _write_chapter(output_dir: Path, chapter: GeneratedChapter) -> None:
 
 def _arc_rows(book: GeneratedBook, flagged: Set[int]) -> List[str]:
     rows = []
-    for chapter, point, coherence in zip(book.chapters, book.arc.points, book.arc.coherence_series):
+    for chapter, point, coherence in zip(book.chapters, book.arc.points, book.arc.coherence_series, strict=True):
         marker = "yes" if chapter.brief.index in flagged else "no"
         rows.append(
             f"| {chapter.brief.index} | {chapter.brief.title} | {point.lightness:.2f} | "

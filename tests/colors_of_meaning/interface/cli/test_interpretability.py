@@ -144,14 +144,14 @@ def _run_main(tmp_path: Path, report: InterpretabilityReport) -> Path:
         ).from_yaml.return_value = config
         use_case = Mock()
         use_case.execute.return_value = report
-        stack.enter_context(patch("colors_of_meaning.interface.cli.interpretability._build_use_case")).return_value = (
-            use_case
-        )
+        stack.enter_context(
+            patch("colors_of_meaning.interface.cli.interpretability._build_use_case")
+        ).return_value = use_case
         dataset = Mock()
         dataset.get_samples.return_value = [Mock()]
-        stack.enter_context(patch("colors_of_meaning.interface.cli.interpretability._setup_dataset")).return_value = (
-            dataset
-        )
+        stack.enter_context(
+            patch("colors_of_meaning.interface.cli.interpretability._setup_dataset")
+        ).return_value = dataset
         stack.enter_context(patch("builtins.print"))
         main(args)
     return output_path

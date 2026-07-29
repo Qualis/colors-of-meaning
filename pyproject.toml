@@ -5,14 +5,23 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 version_scheme = "no-guess-dev"
 
-[tool.black]
+[tool.ruff]
 line-length = 120
-extend-exclude = '''
-/(
-    \.claude
-  | \.vagrant
-)/
-'''
+extend-exclude = [".tox", "build", "dist", ".eggs", ".claude", ".vagrant", "*.md", "*.MD"]
+force-exclude = true
+
+# PLE0100/PLE0101 and PLW0602 backfill flake8-bugbear B037 and pyflakes F824, which
+# the E/W/F/B/N selectors do not carry over. E203 is preview-gated in ruff, so the
+# ignore is inert today and kept only to preserve the flake8-era intent.
+[tool.ruff.lint]
+select = ["E", "W", "F", "B", "N", "PLE0100", "PLE0101", "PLW0602"]
+ignore = ["E203"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 140
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 
 [tool.mypy]
 python_version = "3.11"

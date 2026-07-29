@@ -79,6 +79,6 @@ class NarrativeArc:
     def flagged_beats(self, threshold: float) -> List[FlaggedBeat]:
         return [
             FlaggedBeat(index=point.beat.index, coherence=coherence)
-            for point, coherence in zip(self.points, self.coherence_series)
+            for point, coherence in zip(self.points, self.coherence_series, strict=True)
             if coherence > threshold
         ]

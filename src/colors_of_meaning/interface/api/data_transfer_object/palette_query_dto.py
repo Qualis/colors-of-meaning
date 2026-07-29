@@ -3,7 +3,7 @@ from typing import List
 
 
 class PaletteColorDTO(BaseModel):
-    l: float = Field(..., ge=0.0, le=100.0)
+    l: float = Field(..., ge=0.0, le=100.0)  # noqa: E741
     a: float = Field(..., ge=-128.0, le=127.0)
     b: float = Field(..., ge=-128.0, le=127.0)
     weight: float = Field(default=1.0, gt=0.0)

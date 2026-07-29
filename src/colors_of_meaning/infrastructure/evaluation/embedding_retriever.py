@@ -62,5 +62,7 @@ class EmbeddingRetriever(Retriever):
         self.index.set_ef(max(self.ef, effective_k))
         indices, distances = self.index.knn_query(embedding, k=effective_k)
         return [
-            (self.training_samples[int(i)], float(distance)) for i, distance in zip(indices[0], distances[0]) if i >= 0
+            (self.training_samples[int(i)], float(distance))
+            for i, distance in zip(indices[0], distances[0], strict=True)
+            if i >= 0
         ]

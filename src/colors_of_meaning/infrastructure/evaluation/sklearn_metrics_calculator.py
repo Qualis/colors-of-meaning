@@ -34,7 +34,7 @@ class SklearnMetricsCalculator(MetricsCalculator):
         all_recalls_at_k: Dict[int, List[float]] = {k: [] for k in k_values}
         all_reciprocal_ranks: List[float] = []
 
-        for query, results in zip(queries, search_results):
+        for query, results in zip(queries, search_results, strict=True):
             self._process_query_results(query, results, k_values, all_recalls_at_k, all_reciprocal_ranks)
 
         avg_recall_at_k = self._compute_average_recall(all_recalls_at_k)
@@ -110,7 +110,7 @@ class SklearnMetricsCalculator(MetricsCalculator):
     ) -> float:
         scores = [
             self._single_query_ndcg(query, results, k)
-            for query, results in zip(queries, search_results)
+            for query, results in zip(queries, search_results, strict=True)
             if len(results) >= 2
         ]
         return sum(scores) / len(scores) if scores else 0.0

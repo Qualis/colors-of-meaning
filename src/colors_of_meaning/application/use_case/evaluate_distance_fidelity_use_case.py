@@ -70,7 +70,7 @@ class EvaluateDistanceFidelityUseCase:
         first_indices = generator.integers(0, document_count, size=pair_count)
         distinct_offsets = generator.integers(1, document_count, size=pair_count)
         second_indices = (first_indices + distinct_offsets) % document_count
-        return list(zip(first_indices.tolist(), second_indices.tolist()))
+        return list(zip(first_indices.tolist(), second_indices.tolist(), strict=True))
 
     @staticmethod
     def _reject_insufficient_documents(documents: Sequence[ColoredDocument]) -> None:

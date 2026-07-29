@@ -315,7 +315,7 @@ AG-News-trained color map.
 - ✅ **Phase 4**: Structured color mapping, compression comparison baselines, query by color palette
 - ✅ **Phase 5**: Supervised color mapping with joint projection + classification training
 
-**Quality Gates**: All passing (flake8, black, bandit, semgrep, xenon, mypy, pip-audit, 100% coverage)
+**Quality Gates**: All passing (ruff check, ruff format, bandit, semgrep, radon, xenon, mypy, pip-audit, 100% coverage)
 
 ## Quick Start
 
@@ -904,7 +904,7 @@ vagrant ssh
 | Command | Description |
 |---------|-------------|
 | `tox` | Run all quality gates and tests |
-| `tox -e format` | Format code with black |
+| `tox -e format` | Format code with ruff |
 | `tox -e watch` | Watch for changes and run tests |
 | `tox -e train -- [args]` | Train the embedding-to-color projector |
 | `tox -e encode -- [args]` | Encode documents to color histograms |
@@ -1123,7 +1123,7 @@ colors_of_meaning/
 - Dependency injection using [Lagom](https://github.com/meadsteve/lagom)
 - Structured logging with correlation IDs
 - Consumer-Driven Contract Testing (CDCT)
-- Security scanning and static analysis (flake8, black, bandit, xenon, mypy, semgrep, pip-audit)
+- Security scanning and static analysis (ruff, bandit, radon, xenon, mypy, semgrep, pip-audit)
 - Docker containerization with multi-arch builds (amd64, arm64)
 - Infrastructure as Code (Ansible)
 

@@ -136,7 +136,7 @@ class AnthropicTextGeneratorAdapter(TextGenerator):
         if brief.target_tone is not None:
             tone = brief.target_tone
             sections.append(
-                "Aim for this tone signature — " f"lightness {tone.lightness}, chroma {tone.chroma}, hue {tone.hue}."
+                f"Aim for this tone signature — lightness {tone.lightness}, chroma {tone.chroma}, hue {tone.hue}."
             )
         if corrective_note:
             sections.append(corrective_note)

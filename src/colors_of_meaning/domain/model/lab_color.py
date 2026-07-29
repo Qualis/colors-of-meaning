@@ -4,7 +4,7 @@ from typing import Tuple
 
 @dataclass(frozen=True)
 class LabColor:
-    l: float
+    l: float  # noqa: E741
     a: float
     b: float
 

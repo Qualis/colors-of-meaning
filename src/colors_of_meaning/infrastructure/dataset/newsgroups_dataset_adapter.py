@@ -23,7 +23,7 @@ class NewsgroupsDatasetAdapter(DatasetRepository):
 
         samples = [
             EvaluationSample(text=text, label=int(label), split=split)
-            for text, label in zip(newsgroups.data, newsgroups.target)
+            for text, label in zip(newsgroups.data, newsgroups.target, strict=True)
             if text.strip()
         ]
 

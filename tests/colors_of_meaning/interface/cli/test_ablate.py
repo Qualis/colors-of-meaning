@@ -50,9 +50,9 @@ def _run_main(tmp_path: Path, scripted_results: List[AblationResult]) -> Tuple[M
 
         embedding_adapter = Mock()
         embedding_adapter.encode_batch.return_value = np.zeros((1, 3), dtype=np.float32)
-        stack.enter_context(patch("colors_of_meaning.interface.cli.ablate.SentenceEmbeddingAdapter")).return_value = (
-            embedding_adapter
-        )
+        stack.enter_context(
+            patch("colors_of_meaning.interface.cli.ablate.SentenceEmbeddingAdapter")
+        ).return_value = embedding_adapter
 
         stack.enter_context(patch("colors_of_meaning.interface.cli.ablate.create_color_mapper"))
         mock_load_codebook = stack.enter_context(patch("colors_of_meaning.interface.cli.ablate.load_codebook"))

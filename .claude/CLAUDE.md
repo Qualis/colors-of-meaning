@@ -496,9 +496,10 @@ Before completing any work, code MUST pass:
 
 | Tool | Purpose | Command |
 |------|---------|---------|
-| `flake8` | Linting and style | `tox` |
-| `black` | Code formatting | `tox -e format` |
+| `ruff check` | Linting and style | `tox` |
+| `ruff format` | Code formatting | `tox -e format` |
 | `bandit` | Security scanning | `tox` |
+| `radon` | Complexity reporting | `tox` |
 | `xenon` | Complexity limits | `tox` |
 | `mypy` | Type checking | `tox` |
 | `semgrep` | Pattern/security analysis | `tox` |
@@ -540,7 +541,7 @@ Before completing any work, code MUST pass:
 
 ### Before Completing Work
 1. Run `tox` to verify all tests pass and coverage is 100%
-2. Run `tox -e format` to format code with black
+2. Run `tox -e format` to format code with ruff
 3. Verify all static analysis tools pass
 4. Review for layer boundary violations
 5. Confirm architectural unit tests pass
@@ -550,8 +551,8 @@ Before completing any work, code MUST pass:
 **IMPORTANT: Always use `tox` for final verification, NOT `pytest` directly**
 
 Running `pytest` directly bypasses 8 critical quality gates:
-- flake8 (linting/style)
-- black (code formatting)
+- ruff check (linting/style)
+- ruff format (code formatting)
 - bandit (security scanning)
 - semgrep (pattern/security analysis)
 - pip-audit (dependency vulnerabilities)
@@ -609,7 +610,7 @@ tox -e format
 7. **Wrong test names** - Follow sentence pattern
 8. **Skipping CDCT tests** - Required for service interactions
 9. **Missing observability** - Add logging with correlation-id
-10. **Using pytest instead of tox for final verification** - Bypasses 8 quality gates (flake8, black, bandit, semgrep, mypy, xenon, radon, pip-audit)
+10. **Using pytest instead of tox for final verification** - Bypasses 8 quality gates (ruff check, ruff format, bandit, semgrep, mypy, xenon, radon, pip-audit)
 11. **Creating new files unnecessarily** - Prefer editing existing
 12. **Network calls in unit tests** - Use synthetic data and mocks instead
 
@@ -617,7 +618,7 @@ tox -e format
 
 Work is complete when:
 - [ ] All tests pass with 100% coverage (`tox`)
-- [ ] All static analysis passes (flake8, black, bandit, xenon, mypy, semgrep, pip-audit)
+- [ ] All static analysis passes (ruff check, ruff format, bandit, xenon, mypy, semgrep, pip-audit)
 - [ ] Each test has one logical assertion (related assertions on same result are acceptable)
 - [ ] Test names follow sentence pattern
 - [ ] No comments exist in code

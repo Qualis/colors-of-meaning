@@ -80,8 +80,7 @@ Run all checks via:
 
 We require 100% test coverage and use:
 
-- flake8
-- black
+- ruff (lint + format)
 - bandit
 - semgrep
 - pip-audit

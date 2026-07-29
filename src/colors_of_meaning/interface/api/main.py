@@ -52,6 +52,7 @@ APPLICATION_TITLE = "Colors of Meaning API"
 APPLICATION_VERSION = "1.0.0"
 CODEBOOK_NAME = DEFAULT_CODEBOOK_NAME
 CORPUS_ARTIFACT_PATH = DEFAULT_CORPUS_PATH
+DEFAULT_ARTIFACT_PATHS = ArtifactPaths()
 DISTANCE_METRIC = "wasserstein"
 FALLBACK_BINS_PER_DIMENSION = 16
 SINKHORN_REGULARISATION: Optional[float] = None
@@ -63,7 +64,7 @@ def _correlation_id() -> str:
     return str(uuid.uuid4())
 
 
-def _load_query_codebook(artifact_paths: ArtifactPaths = ArtifactPaths()) -> ColorCodebook:
+def _load_query_codebook(artifact_paths: ArtifactPaths = DEFAULT_ARTIFACT_PATHS) -> ColorCodebook:
     repository = FileColorCodebookRepository(artifact_paths.codebook_base_path)
     codebook = repository.load(artifact_paths.codebook_name)
     if codebook is not None:

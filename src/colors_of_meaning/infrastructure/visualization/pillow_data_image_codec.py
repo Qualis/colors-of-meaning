@@ -56,7 +56,7 @@ class PillowDataImageCodec(DataImageCodec):
         if page_count > self.max_pages:
             raise ValueError(f"document needs {page_count} pages, exceeding the cap of {self.max_pages}")
         paths = _page_paths(output_path, page_count)
-        for index, (chunk, path) in enumerate(zip(chunks, paths)):
+        for index, (chunk, path) in enumerate(zip(chunks, paths, strict=True)):
             self._paint_page(frame_page(chunk, index, page_count), columns, width, height, path, dpi)
         return paths
 

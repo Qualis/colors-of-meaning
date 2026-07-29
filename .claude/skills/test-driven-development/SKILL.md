@@ -339,7 +339,7 @@ Before marking work complete:
 
 Can't check all boxes? You skipped TDD. Start over.
 
-**Python projects:** Use `tox` for final verification to ensure all quality gates pass (flake8, black, bandit, semgrep, mypy, xenon, radon, pip-audit). Running `pytest` alone bypasses these critical checks.
+**Python projects:** Use `tox` for final verification to ensure all quality gates pass (ruff check, ruff format, bandit, semgrep, mypy, xenon, radon, pip-audit). Running `pytest` alone bypasses these critical checks.
 
 ## When Stuck
 

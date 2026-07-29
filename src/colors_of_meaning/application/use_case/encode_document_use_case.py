@@ -24,4 +24,7 @@ class EncodeDocumentUseCase:
         if len(sentence_embeddings_list) != len(document_ids):
             raise ValueError("Mismatch between embeddings and document IDs")
 
-        return [self.execute(embeddings, doc_id) for embeddings, doc_id in zip(sentence_embeddings_list, document_ids)]
+        return [
+            self.execute(embeddings, doc_id)
+            for embeddings, doc_id in zip(sentence_embeddings_list, document_ids, strict=True)
+        ]

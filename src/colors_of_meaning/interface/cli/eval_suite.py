@@ -251,7 +251,7 @@ def _build_cells(args: EvalSuiteArgs) -> List[EvaluationCell]:
     budgets = _cell_budgets(args)
     return [
         _build_cell(dataset_name, budget, method, args.distance)
-        for dataset_name, budget in zip(args.datasets, budgets)
+        for dataset_name, budget in zip(args.datasets, budgets, strict=True)
         for method in args.methods
     ]
 

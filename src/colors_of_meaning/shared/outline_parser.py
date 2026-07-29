@@ -36,7 +36,9 @@ def _split_by_headings(text: str) -> List[Tuple[str, str]]:
     lines = text.splitlines()
     headings = _heading_lines(lines)
     ends = [start for start, _ in headings][1:] + [len(lines)]
-    return [(title, "\n".join(lines[start + 1 : end]).strip()) for (start, title), end in zip(headings, ends)]
+    return [
+        (title, "\n".join(lines[start + 1 : end]).strip()) for (start, title), end in zip(headings, ends, strict=True)
+    ]
 
 
 def _split_by_blank_lines(text: str) -> List[Tuple[str, str]]:

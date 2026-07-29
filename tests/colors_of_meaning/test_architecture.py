@@ -103,8 +103,9 @@ def test_should_not_have_circular_dependencies():
         )
         .match("colors_of_meaning.*")
         .should(
-            lambda module, direct_imports, all_imports: module not in direct_imports
-            and module not in all_imports.get(module, set()),
+            lambda module, direct_imports, all_imports: (
+                module not in direct_imports and module not in all_imports.get(module, set())
+            ),
             "no_circular_dependencies",
         )
         .check("colors_of_meaning")

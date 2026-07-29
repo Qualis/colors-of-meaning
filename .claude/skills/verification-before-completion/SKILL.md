@@ -79,7 +79,7 @@ Skip any step = lying, not verifying
 ```
 ✅ [Run tox] [See: 34/34 pass, all quality gates pass] "All tests pass"
 ❌ "Should pass now" / "Looks correct"
-❌ [Run pytest] (bypasses 8 quality gates: flake8, black, bandit, semgrep, mypy, xenon, radon, pip-audit)
+❌ [Run pytest] (bypasses 8 quality gates: ruff check, ruff format, bandit, semgrep, mypy, xenon, radon, pip-audit)
 ```
 
 **Regression tests (TDD Red-Green):**
