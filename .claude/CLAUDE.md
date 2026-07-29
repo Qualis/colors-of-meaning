@@ -505,6 +505,26 @@ Before completing any work, code MUST pass:
 | `semgrep` | Pattern/security analysis | `tox` |
 | `pip-audit` | Dependency vulnerabilities | `tox` |
 
+### Dependency Management (uv)
+
+Dependencies are managed with **uv**. `pyproject.toml` holds abstract requirements plus all
+project metadata (PEP 621 `[project]`); `uv.lock` holds the exact cross-platform closure.
+Both are committed. There is no `setup.cfg`, `setup.py`, or `requirements.lock`.
+
+| Task | Command |
+|------|---------|
+| Create/refresh the local environment | `uv sync --locked --extra testing` |
+| Add or change a dependency | edit `pyproject.toml`, then `uv lock` |
+| Install the gate runner | `uv tool install --python 3.11 --with tox-uv tox` |
+
+- ALWAYS commit `uv.lock` alongside a `pyproject.toml` dependency change. `tox` runs
+  `uv sync --locked`, which FAILS if the lock is stale — do not work around it with `--frozen`.
+- `torch` resolves from an explicit PyTorch CPU index via `[tool.uv.sources]`; do NOT add
+  `nvidia-*` or `triton` pins to make the lock portable.
+- `tox` requires **tox 4** with the `tox-uv` plugin. Every environment is built by `uv` from the
+  lock, EXCEPT `build`/`clean`/`publish`, which use `runner = uv-venv-runner` with `deps` because
+  the lock runner ignores `deps`. The `--python 3.11` above is what makes a local gate run match CI.
+
 ### Module Structure
 
 - Include `__init__.py` in EVERY Python package

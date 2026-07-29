@@ -1,9 +1,31 @@
-- name: Install tox automation project
-  ansible.builtin.apt:
-    name: tox
+- name: Install uv
+  ansible.builtin.command:
+    cmd: pipx install uv
+    creates: ~/.local/bin/uv
+  register: uv_install
+  retries: 3
+  delay: 5
+  until: uv_install is not failed
+
+- name: Symlink uv
+  ansible.builtin.file:
+    src: "{{ ansible_facts['user_dir'] }}/.local/bin/uv"
+    dest: /usr/local/bin/uv
+    state: link
   become: true
 
-- name: Install setuptools-scm
-  ansible.builtin.apt:
-    name: python3-setuptools-scm
+- name: Install tox automation project with the tox-uv plugin
+  ansible.builtin.command:
+    cmd: /usr/local/bin/uv tool install --python 3.11 --with "tox-uv>=1.36.0" "tox>=4.52.1,<5"
+    creates: ~/.local/bin/tox
+  register: tox_install
+  retries: 3
+  delay: 5
+  until: tox_install is not failed
+
+- name: Symlink tox
+  ansible.builtin.file:
+    src: "{{ ansible_facts['user_dir'] }}/.local/bin/tox"
+    dest: /usr/local/bin/tox
+    state: link
   become: true

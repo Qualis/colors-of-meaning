@@ -43,7 +43,7 @@ A task is complete only when:
 - [ ] **No comments**; code is self-documenting.
 - [ ] Layer boundaries respected — domain stays pure (no `sklearn`/`torch`/`ot` imports in `domain/`); new adapters live in `infrastructure/` behind a `domain/service` port and are wired with Lagom.
 - [ ] Any new endpoint returns a **Pydantic DTO**, never a dict.
-- [ ] New dependencies are added to `setup.cfg`/`pyproject.toml` and pass `pip-audit`.
+- [ ] New dependencies are added to `pyproject.toml`, locked with `uv lock` (commit `uv.lock`), and pass `pip-audit`.
 
 ---
 

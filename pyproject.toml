@@ -1,9 +1,123 @@
 [build-system]
-requires = ["setuptools>=46.1.0", "setuptools_scm[toml]>=5"]
+requires = ["setuptools>=77", "setuptools_scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "colors-of-meaning"
+description = "Machine synesthesia for semantic compression and retrieval — sentence embeddings as CIE-Lab colours"
+readme = { file = "README.MD", content-type = "text/markdown; charset=UTF-8" }
+license = "MIT"
+license-files = ["LICENSE.txt"]
+authors = [{ name = "SVO", email = "svo@qual.is" }]
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+]
+dynamic = ["version"]
+dependencies = [
+    "anthropic",
+    "argon2-cffi",
+    "click",
+    "datasets",
+    "hnswlib",
+    "fastapi",
+    "fastapi-health",
+    "lagom",
+    "matplotlib",
+    "numpy",
+    "pillow",
+    "pot",
+    "pydantic",
+    "pydantic-settings",
+    "pyyaml",
+    "scikit-learn",
+    "scipy",
+    "sentence-transformers",
+    "torch",
+    "torchmetrics",
+    "tyro",
+    "uvicorn[standard]",
+]
+
+[project.optional-dependencies]
+testing = [
+    "assertpy",
+    "bandit",
+    "httpx",
+    "mypy",
+    "pip-audit",
+    "pytest",
+    "pytest-archon",
+    "pytest-benchmark",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-order",
+    "pytest-random-order",
+    "pytest-testmon",
+    "pytest-watch",
+    "ruff",
+    "setuptools",
+    "xenon",
+]
+
+[project.urls]
+Homepage = "https://github.com/Qualis/colors-of-meaning"
+Source = "https://github.com/Qualis/colors-of-meaning"
+Article = "https://www.qual.is/posts/colors-of-meaning"
+
+[project.scripts]
+colors-of-meaning = "colors_of_meaning.interface.api.main:run"
+colors-of-meaning-cli = "colors_of_meaning.interface.cli.main:run"
+
+[tool.setuptools]
+platforms = ["any"]
+zip-safe = false
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests"]
+
+[tool.setuptools.package-data]
+colors_of_meaning = ["py.typed"]
+"colors_of_meaning.resources" = ["*.properties", "*.tsv"]
 
 [tool.setuptools_scm]
 version_scheme = "no-guess-dev"
+
+[tool.uv]
+required-version = ">=0.12.0"
+# Matches the 7-day Dependabot cooldown in .github/dependabot.yml: a freshly
+# published version is never resolved into the lock on the day it lands.
+exclude-newer = "7 days"
+# torch is held at the version the committed evaluation results were produced with.
+# Bumping it shifts the whole ML stack and is a separately-validated change; see
+# docs/security/audit-suppressions.md.
+constraint-dependencies = ["torch==2.12.1"]
+
+# torch resolves from the PyTorch CPU index so the lock never carries the CUDA
+# stack the gate cannot use. torchmetrics stays on PyPI: the CPU index only
+# publishes 1.0.3, far behind the version the pipeline needs.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+addopts = ["--verbose", "-m", "not benchmark"]
+norecursedirs = [".tox", ".vagrant", "build", "dist"]
+testpaths = ["tests"]
+filterwarnings = [
+    'ignore:Deprecated call to \`pkg_resources.declare_namespace:DeprecationWarning',
+]
+markers = [
+    "integration: integration tests",
+    "benchmark: performance benchmark tests",
+]
 
 [tool.ruff]
 line-length = 120

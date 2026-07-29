@@ -36,10 +36,5 @@ handle_options() {
 
 handle_options "$@"
 
-python3 -m venv /tmp/development
-
-# shellcheck disable=SC1091
-source /tmp/development/bin/activate
-
-pip install -e .
-python -m colors_of_meaning
+uv sync --locked
+uv run python -m colors_of_meaning

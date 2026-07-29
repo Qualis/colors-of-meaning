@@ -32,27 +32,62 @@ Our architecture separates the system into domain, application, infrastructure, 
 Setup
 -----
 
+Dependencies are managed with `uv`_. ``pyproject.toml`` holds the abstract requirements and
+``uv.lock`` holds the exact, cross-platform resolved closure; both are committed.
+
 1. Fork the `repository`_ and clone it locally.
 
 .. code:: bash
 
     git clone git@github.com:Qualis/colors-of-meaning.git
     cd colors-of-meaning
-    pip install -U pip setuptools -e .
 
-2. Create a virtual environment:
-
-.. code:: bash
-
-    python -m venv venv
-    source venv/bin/activate
-
-3. Install development tools:
+2. Install ``uv`` (once):
 
 .. code:: bash
 
-    pip install pre-commit tox
-    pre-commit install
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+3. Create the development environment from the lock. This writes ``.venv`` with exactly the
+   versions in ``uv.lock`` — no resolution, no drift:
+
+.. code:: bash
+
+    uv sync --locked --extra testing
+
+4. Install the quality gate runner. ``tox-uv`` makes ``tox`` build its environments with
+   ``uv`` from ``uv.lock``, so a gate run takes seconds rather than rebuilding the ML stack:
+
+.. code:: bash
+
+    uv tool install --python 3.11 --with tox-uv tox
+
+The ``--python 3.11`` matters: the gate environment is named ``default``, so ``tox`` runs it on
+whatever interpreter ``tox`` itself was installed with. Pinning 3.11 here is what makes a local
+run match the PR gate.
+
+Changing dependencies
+---------------------
+
+Edit the abstract requirement in ``pyproject.toml``, then regenerate and commit the lock:
+
+.. code:: bash
+
+    uv lock
+
+``tox`` runs ``uv sync --locked``, which fails if ``uv.lock`` is out of date with respect to
+``pyproject.toml`` — so a forgotten ``uv lock`` is caught by the gate, not discovered later.
+
+``torch`` resolves from an explicit PyTorch CPU index (``[tool.uv.sources]``) so the lock never
+carries a CUDA stack the CPU-only gate cannot use, and is held at a fixed version for
+reproducibility of the committed evaluation results; see ``docs/security/audit-suppressions.md``.
+
+.. note::
+
+   The lock is **CPU-only on every platform** — that is deliberate, since the gate and CI have no
+   GPU. If you have a CUDA machine and want to train on it, install a CUDA build over the synced
+   environment (``uv pip install torch --index-url https://download.pytorch.org/whl/cu128``).
+   That deviates from ``uv.lock`` on purpose, so do not commit a lock regenerated that way.
 
 Start Coding
 ------------
@@ -136,6 +171,7 @@ Resources
 .. _Python Software Foundation's Code of Conduct: https://www.python.org/psf/conduct/
 .. _issue tracker: https://github.com/Qualis/colors-of-meaning/issues
 .. _repository: https://github.com/Qualis/colors-of-meaning
+.. _uv: https://docs.astral.sh/uv/
 .. _reStructuredText: https://www.sphinx-doc.org/en/master/usage/restructuredtext/
 .. _Sphinx: https://www.sphinx-doc.org/en/master/
 
