@@ -290,7 +290,8 @@ def _reproduce_command(args: RateDistortionArgs) -> str:
     return (
         f"tox -e rate_distortion -- {_source_flags(args)} --budgets {budgets} "
         f"--methods {methods}{accuracy_flag} --distance {args.distance} "
-        f"--max-samples {args.max_samples} --config {args.config}"
+        f"--max-samples {args.max_samples} --config {args.config} "
+        f"--output-path {args.output_path} --figure-path {args.figure_path}"
     )
 
 

@@ -266,6 +266,20 @@ class TestRateDistortionCli:
 
         assert "--source documents" in (tmp_path / "rate_distortion.md").read_text()
 
+    def test_should_record_the_output_path_in_the_reproduce_command(self, mocker, tmp_path) -> None:
+        context = self._setup(mocker, tmp_path, _frontier())
+
+        main(context.args)
+
+        assert f"--output-path {context.args.output_path}" in (tmp_path / "rate_distortion.md").read_text()
+
+    def test_should_record_the_figure_path_in_the_reproduce_command(self, mocker, tmp_path) -> None:
+        context = self._setup(mocker, tmp_path, _frontier())
+
+        main(context.args)
+
+        assert f"--figure-path {context.args.figure_path}" in (tmp_path / "rate_distortion.md").read_text()
+
 
 def _frontier_arg(context: SimpleNamespace) -> RateDistortionFrontier:
     return context.use_case.return_value.execute.return_value

@@ -58,5 +58,5 @@ is not directly comparable; read each codec's own curve in the figure rather tha
 ## Reproduce
 
 ```bash
-tox -e rate_distortion -- --source documents --documents-dir documents --split-strategy work --min-paragraph-chars 200 --paragraphs-per-work 60 --validation-fraction 0.2 --test-fraction 0.2 --budgets 2 4 8 16 --methods color_vq gzip pq --with-accuracy --distance jensen_shannon --max-samples 300 --config configs/documents.yaml
+tox -e rate_distortion -- --source documents --documents-dir documents --split-strategy work --min-paragraph-chars 200 --paragraphs-per-work 60 --validation-fraction 0.2 --test-fraction 0.2 --budgets 2 4 8 16 --methods color_vq gzip pq --with-accuracy --distance jensen_shannon --max-samples 300 --config configs/documents.yaml --output-path reports/documents_rate_distortion.md --figure-path reports/figures/documents_rate_distortion.png
 ```

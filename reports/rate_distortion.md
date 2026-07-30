@@ -56,5 +56,5 @@ is not directly comparable; read each codec's own curve in the figure rather tha
 ## Reproduce
 
 ```bash
-tox -e rate_distortion -- --dataset ag_news --budgets 2 4 8 16 --methods color_vq gzip pq --with-accuracy --distance jensen_shannon --max-samples 200 --config configs/base.yaml
+tox -e rate_distortion -- --dataset ag_news --budgets 2 4 8 16 --methods color_vq gzip pq --with-accuracy --distance jensen_shannon --max-samples 200 --config configs/base.yaml --output-path reports/rate_distortion.md --figure-path reports/figures/rate_distortion.png
 ```
