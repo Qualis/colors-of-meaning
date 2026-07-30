@@ -345,11 +345,15 @@ See [Reproducing the Color Method Result](#reproducing-the-color-method-result) 
 
 ### Train the Structured Color Mapper
 
-The structured mapper uses explicit heads for hue (semantic clusters), lightness (sentiment), and chroma (concreteness), trained with a multi-objective self-supervised loss.
+The structured mapper uses explicit heads for hue (semantic clusters), lightness (sentiment), and chroma (concreteness), trained with a multi-objective loss. The lightness head reads sentiment from the dataset labels, so it needs a config that sets `structured_mapper.sentiment_source: labels` over a sentiment-labelled dataset. `configs/interpretability.yaml` pins IMDB and is the command that produced the committed `structured_projector.pth`:
 
 ```bash
-tox -e train -- --config configs/structured.yaml --mapper-type structured
+tox -e train -- --config configs/interpretability.yaml --mapper-type structured \
+  --output-model artifacts/models/structured_projector.pth \
+  --output-codebook interpretability_codebook
 ```
+
+`configs/structured.yaml` leaves `sentiment_source` at `none`, which trains the same heads against a neutral lightness target from a line-delimited corpus passed with `--dataset-path`.
 
 ### Interpretability (Validated)
 
@@ -619,11 +623,11 @@ All CLI tools are available via tox environments or as Python modules directly.
 Train the embedding-to-color projector:
 
 ```bash
-# Unconstrained projector (default)
-tox -e train -- --config configs/base.yaml
+# Unconstrained projector (default) — reads a line-delimited text corpus
+tox -e train -- --config configs/base.yaml --dataset-path data/sample_train.txt
 
 # Structured projector (hue=semantics, lightness=sentiment, chroma=concreteness)
-tox -e train -- --config configs/structured.yaml --mapper-type structured
+tox -e train -- --config configs/interpretability.yaml --mapper-type structured
 
 # Supervised projector (joint projection + classification)
 tox -e train -- --config configs/supervised.yaml --mapper-type supervised
@@ -631,12 +635,12 @@ tox -e train -- --config configs/supervised.yaml --mapper-type supervised
 
 **Arguments**:
 - `--config`: Configuration YAML file (default: `configs/base.yaml`)
-- `--dataset-path`: Path to training text file (default: `data/train.txt`)
+- `--dataset-path`: Line-delimited text corpus, one document per line, used by the mapper types that train on free text (default: `data/train.txt`, which is **not** committed — pass your own corpus, or `data/sample_train.txt` for a five-line smoke run)
 - `--output-model`: Output path for trained model (default: `artifacts/models/projector.pth`)
 - `--output-codebook`: Output name for color codebook (default: `codebook_4096`)
 - `--mapper-type`: Projector variant to train: `unconstrained` (default), `structured`, or `supervised`
 
-The structured mapper trains with a multi-objective loss combining angular hue loss, MSE lightness loss, and MSE chroma loss, weighted by alpha/beta/gamma from the config. Self-supervised targets are derived from the embeddings themselves: k-means clusters for hue, mean activation for lightness, and variance for chroma.
+The structured mapper trains with a multi-objective loss combining angular hue loss, MSE lightness loss, and MSE chroma loss, weighted by alpha/beta/gamma from the config. Hue targets are k-means clusters over the embeddings, ordered by centroid so neighbouring hues carry neighbouring meanings. Lightness and chroma targets come from real signals rather than the embeddings: the dataset's sentiment labels when `sentiment_source: labels` is set, and the bundled Brysbaert concreteness lexicon scored over the training texts. Without those inputs each falls back to a constant target (neutral lightness, half of `max_chroma`), which trains the head toward no signal at all.
 
 The supervised mapper trains with a combined loss: MSE projection loss + classification_weight * CrossEntropyLoss. It loads labeled data from a dataset adapter (AG News, IMDB, or 20 Newsgroups) rather than a plain text file. The classification head is discarded after training.
 
@@ -899,7 +903,7 @@ vagrant provision
 vagrant ssh
 ```
 
-### Tox Environments
+### Commands
 
 | Command | Description |
 |---------|-------------|
@@ -917,7 +921,9 @@ vagrant ssh
 | `tox -e authorship -- [args]` | Write `reports/documents_authorship.md` computed tables from a held-out authored-corpus train/eval (`--refresh-scaling` re-runs the sweep) |
 | `tox -e compass -- [args]` | Read a story outline as a colour trajectory (arc, drift, coherence) |
 | `tox -e grounding -- [args]` | Audit RAG answers for colour-distribution drift from their retrieved context |
+| `tox -e visualize_lossless -- [args]` | Render the lossless barcode contact sheet and the semantic-vs-lossless comparison for one book |
 | `tox -e query -- [args]` | Query documents by color palette |
+| `./bin/generate [args]` | Regenerate the artifacts under `reports/` by running the environments above with each report's own `Reproduce` command (`--list` for the stages, `--dry-run` to preview, `--only <stage>` for one) |
 
 ### Test
 
