@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional, Tuple
 
 from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
@@ -64,5 +64,17 @@ class FigureRenderer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def render_a4_gallery(self, sheet_paths: List[str], output_path: str, columns: int = 12) -> None:
+    def render_a4_gallery(
+        self,
+        sheet_paths: List[str],
+        output_path: str,
+        columns: int = 12,
+        captions: Optional[List[str]] = None,
+        title: str = "Per-book A4 colour signatures",
+        max_tile_pixels: Optional[int] = None,
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def render_image_comparison(self, panels: List[Tuple[str, str]], title: str, output_path: str) -> None:
         raise NotImplementedError

@@ -2,8 +2,10 @@ from pathlib import Path
 
 from colors_of_meaning.shared.document_corpus import (
     discover_author_works,
+    discover_book_images,
     extract_paragraphs,
     parse_author_work,
+    parse_book_image_caption,
     strip_gutenberg_boilerplate,
 )
 
@@ -71,3 +73,34 @@ class TestDiscoverAuthorWorks:
 
     def test_should_return_empty_when_root_is_not_a_directory(self, tmp_path: Path) -> None:
         assert discover_author_works(tmp_path / "missing") == []
+
+
+def _write_image(root: Path, name: str) -> None:
+    (root / name).write_bytes(b"png bytes")
+
+
+class TestDiscoverBookImages:
+    def test_should_return_images_ordered_by_name(self, tmp_path: Path) -> None:
+        _write_image(tmp_path, "carroll__alice.png")
+        _write_image(tmp_path, "austen__emma.png")
+
+        images = discover_book_images(tmp_path)
+
+        assert [path.name for path in images] == ["austen__emma.png", "carroll__alice.png"]
+
+    def test_should_return_empty_when_root_is_not_a_directory(self, tmp_path: Path) -> None:
+        assert discover_book_images(tmp_path / "missing") == []
+
+    def test_should_ignore_files_that_are_not_png(self, tmp_path: Path) -> None:
+        _write_image(tmp_path, "austen__emma.png")
+        (tmp_path / "notes.txt").write_text("body", encoding="utf-8")
+
+        assert [path.name for path in discover_book_images(tmp_path)] == ["austen__emma.png"]
+
+
+class TestParseBookImageCaption:
+    def test_should_render_the_author_and_work_as_a_path(self) -> None:
+        assert parse_book_image_caption(Path("austen__emma.png")) == "austen/emma"
+
+    def test_should_keep_the_page_suffix_for_multi_page_books(self) -> None:
+        assert parse_book_image_caption(Path("darwin__the_descent_of_man_p02.png")) == "darwin/the_descent_of_man_p02"

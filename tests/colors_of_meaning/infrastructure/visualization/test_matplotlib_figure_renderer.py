@@ -22,6 +22,7 @@ from colors_of_meaning.domain.model.rate_distortion_point import (
 from colors_of_meaning.domain.service.figure_renderer import FigureRenderer
 from colors_of_meaning.infrastructure.visualization.matplotlib_figure_renderer import (
     FIGURE_DPI,
+    _load_tile_image,
     NARRATIVE_ARC_FIGURE_SIZE,
     RATE_DISTORTION_FIGURE_SIZE,
     MatplotlibFigureRenderer,
@@ -863,6 +864,109 @@ class TestRenderA4Gallery:
         MatplotlibFigureRenderer().render_a4_gallery(["a.png", "b.png"], str(tmp_path / "g.png"), columns=12)
 
         assert mock_plt.subplots.call_args.args == (1, 2)
+
+    def test_should_write_a_non_empty_gallery_png_when_captions_are_provided(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        output_path = str(tmp_path / "captioned.png")
+
+        renderer.render_a4_gallery(_sheet_paths(tmp_path, 4), output_path, 2, ["a/w", "b/x", "c/y", "d/z"])
+
+        assert os.path.getsize(output_path) > 0
+
+    def test_should_raise_when_the_caption_count_does_not_match_the_sheet_count(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+
+        with pytest.raises(ValueError, match="one caption per sheet"):
+            renderer.render_a4_gallery(_sheet_paths(tmp_path, 3), str(tmp_path / "g.png"), 2, ["only", "two"])
+
+    @patch(f"{MODULE}.plt")
+    def test_should_draw_a_caption_on_each_tile_when_captions_are_provided(
+        self, mock_plt: Mock, tmp_path: Path
+    ) -> None:
+        axes = np.array([Mock(), Mock()])
+        mock_plt.subplots.return_value = (Mock(), axes)
+        mock_plt.imread.return_value = np.zeros((2, 2, 3))
+
+        MatplotlibFigureRenderer().render_a4_gallery(["a.png", "b.png"], str(tmp_path / "g.png"), 2, ["a/w", "b/x"])
+
+        assert [axis.text.call_args.args[2] for axis in axes] == ["a/w", "b/x"]
+
+    @patch(f"{MODULE}.plt")
+    def test_should_use_the_supplied_title_for_the_gallery(self, mock_plt: Mock, tmp_path: Path) -> None:
+        figure = Mock()
+        mock_plt.subplots.return_value = (figure, np.array([Mock()]))
+        mock_plt.imread.return_value = np.zeros((2, 2, 3))
+
+        MatplotlibFigureRenderer().render_a4_gallery(["a.png"], str(tmp_path / "g.png"), 1, None, "Barcodes")
+
+        figure.suptitle.assert_called_once_with("Barcodes")
+
+    def test_should_downsample_tiles_when_a_pixel_bound_is_given(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        wide = str(tmp_path / "wide.png")
+        Image.new("RGB", (800, 800), (10, 20, 30)).save(wide, format="PNG")
+
+        renderer.render_a4_gallery([wide], str(tmp_path / "bounded.png"), 1, None, "Bounded", 100)
+
+        assert os.path.getsize(tmp_path / "bounded.png") > 0
+
+    def test_should_leave_tiles_at_full_size_when_no_pixel_bound_is_given(self, tmp_path: Path) -> None:
+        loaded = _load_tile_image(_write_sheet(tmp_path, "full.png", 40), None)
+
+        assert loaded.shape[:2] == (28, 20)
+
+    def test_should_shrink_the_tile_to_the_pixel_bound(self, tmp_path: Path) -> None:
+        loaded = _load_tile_image(_write_sheet(tmp_path, "bounded_tile.png", 40), 7)
+
+        assert max(loaded.shape[:2]) <= 7
+
+
+class TestRenderImageComparison:
+    def test_should_write_a_non_empty_comparison_png(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        panels = [(path, f"caption {index}") for index, path in enumerate(_sheet_paths(tmp_path, 2))]
+        output_path = str(tmp_path / "two_ways.png")
+
+        renderer.render_image_comparison(panels, "Two ways", output_path)
+
+        assert os.path.getsize(output_path) > 0
+
+    def test_should_raise_when_no_panels_are_provided(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+
+        with pytest.raises(ValueError, match="at least one panel"):
+            renderer.render_image_comparison([], "Two ways", str(tmp_path / "two_ways.png"))
+
+    @patch(f"{MODULE}.plt")
+    def test_should_create_one_axis_per_panel(self, mock_plt: Mock, tmp_path: Path) -> None:
+        mock_plt.subplots.return_value = (Mock(), np.array([Mock(), Mock()]))
+        mock_plt.imread.return_value = np.zeros((2, 2, 3))
+
+        panels = [("a.png", "meaning"), ("b.png", "bytes")]
+        MatplotlibFigureRenderer().render_image_comparison(panels, "Two ways", str(tmp_path / "c.png"))
+
+        assert mock_plt.subplots.call_args.args == (1, 2)
+
+    @patch(f"{MODULE}.plt")
+    def test_should_caption_each_panel(self, mock_plt: Mock, tmp_path: Path) -> None:
+        axes = np.array([Mock(), Mock()])
+        mock_plt.subplots.return_value = (Mock(), axes)
+        mock_plt.imread.return_value = np.zeros((2, 2, 3))
+
+        panels = [("a.png", "meaning"), ("b.png", "bytes")]
+        MatplotlibFigureRenderer().render_image_comparison(panels, "Two ways", str(tmp_path / "c.png"))
+
+        assert [axis.text.call_args.args[2] for axis in axes] == ["meaning", "bytes"]
+
+    @patch(f"{MODULE}.plt")
+    def test_should_set_the_comparison_title_on_the_figure(self, mock_plt: Mock, tmp_path: Path) -> None:
+        figure = Mock()
+        mock_plt.subplots.return_value = (figure, np.array([Mock()]))
+        mock_plt.imread.return_value = np.zeros((2, 2, 3))
+
+        MatplotlibFigureRenderer().render_image_comparison([("a.png", "meaning")], "Two ways", str(tmp_path / "c.png"))
+
+        assert figure.suptitle.call_args.args == ("Two ways",)
 
 
 class TestSaveFigure:

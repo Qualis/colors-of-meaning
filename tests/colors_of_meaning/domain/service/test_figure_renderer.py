@@ -13,6 +13,7 @@ RENDER_METHOD_NAMES: Tuple[str, ...] = (
     "render_rate_distortion",
     "render_narrative_arc",
     "render_a4_gallery",
+    "render_image_comparison",
 )
 
 
@@ -70,7 +71,12 @@ class TestFigureRenderer:
             def render_narrative_arc(self, arc, output_path):  # type: ignore
                 pass
 
-            def render_a4_gallery(self, sheet_paths, output_path, columns=12):  # type: ignore
+            def render_a4_gallery(
+                self, sheet_paths, output_path, columns=12, captions=None, title="", max_tile_pixels=None
+            ):  # type: ignore  # noqa: E501
+                pass
+
+            def render_image_comparison(self, panels, title, output_path):  # type: ignore
                 pass
 
         renderer = ConcreteFigureRenderer()

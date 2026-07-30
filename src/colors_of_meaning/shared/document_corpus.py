@@ -27,3 +27,13 @@ def discover_author_works(root: Path) -> List[Path]:
     if not root.is_dir():
         return []
     return sorted(root.glob("*/*.txt"), key=lambda path: (path.parent.name, path.name))
+
+
+def discover_book_images(root: Path) -> List[Path]:
+    if not root.is_dir():
+        return []
+    return sorted(root.glob("*.png"), key=lambda path: path.name)
+
+
+def parse_book_image_caption(path: Path) -> str:
+    return path.stem.replace("__", "/")

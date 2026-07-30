@@ -1,6 +1,6 @@
 import math
 import os
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -27,6 +27,27 @@ RATE_DISTORTION_FIGURE_SIZE = (11.0, 7.0)
 NARRATIVE_ARC_FIGURE_SIZE = (11.0, 9.0)
 GALLERY_TILE_WIDTH_INCHES = 1.3
 GALLERY_TILE_HEIGHT_INCHES = 1.84
+GALLERY_CAPTION_OFFSET = -0.02
+GALLERY_CAPTION_FONT_SIZE = 5
+COMPARISON_PANEL_WIDTH_INCHES = 4.7
+COMPARISON_PANEL_HEIGHT_INCHES = 6.4
+COMPARISON_CAPTION_OFFSET = -0.02
+COMPARISON_CAPTION_FONT_SIZE = 11
+COMPARISON_TITLE_FONT_SIZE = 15
+
+
+def _entry_at(entries: Optional[List[str]], position: int) -> Optional[str]:
+    if entries is None or position >= len(entries):
+        return None
+    return entries[position]
+
+
+def _load_tile_image(sheet_path: str, max_tile_pixels: Optional[int]) -> npt.NDArray:
+    image = plt.imread(sheet_path)
+    if max_tile_pixels is None:
+        return np.asarray(image)
+    step = max(1, int(math.ceil(max(image.shape[0], image.shape[1]) / max_tile_pixels)))
+    return np.asarray(image[::step, ::step])
 
 
 class MatplotlibFigureRenderer(FigureRenderer):
@@ -211,9 +232,21 @@ class MatplotlibFigureRenderer(FigureRenderer):
         self._merge_legends(distortion_axis, accuracy_axis)
         self._save_figure(fig, output_path, tight=False)
 
-    def render_a4_gallery(self, sheet_paths: List[str], output_path: str, columns: int = 12) -> None:
+    def render_a4_gallery(
+        self,
+        sheet_paths: List[str],
+        output_path: str,
+        columns: int = 12,
+        captions: Optional[List[str]] = None,
+        title: str = "Per-book A4 colour signatures",
+        max_tile_pixels: Optional[int] = None,
+    ) -> None:
         if not sheet_paths:
             raise ValueError("render_a4_gallery requires at least one sheet path")
+        if captions is not None and len(captions) != len(sheet_paths):
+            raise ValueError(
+                f"render_a4_gallery needs one caption per sheet, got {len(captions)} for {len(sheet_paths)}"
+            )
 
         column_count = min(columns, len(sheet_paths))
         row_count = int(math.ceil(len(sheet_paths) / column_count))
@@ -225,16 +258,62 @@ class MatplotlibFigureRenderer(FigureRenderer):
         flat_axes = np.atleast_1d(axes).ravel()
 
         for position, axis in enumerate(flat_axes):
-            self._draw_gallery_tile(axis, sheet_paths[position] if position < len(sheet_paths) else None)
+            self._draw_gallery_tile(
+                axis, _entry_at(sheet_paths, position), _entry_at(captions, position), max_tile_pixels
+            )
 
-        fig.suptitle("Per-book A4 colour signatures")
+        fig.suptitle(title)
         self._save_figure(fig, output_path)
 
     @staticmethod
-    def _draw_gallery_tile(axis: Any, sheet_path: Optional[str]) -> None:
+    def _draw_gallery_tile(
+        axis: Any,
+        sheet_path: Optional[str],
+        caption: Optional[str] = None,
+        max_tile_pixels: Optional[int] = None,
+    ) -> None:
         axis.axis("off")
-        if sheet_path is not None:
-            axis.imshow(plt.imread(sheet_path), interpolation="nearest")
+        if sheet_path is None:
+            return
+        axis.imshow(_load_tile_image(sheet_path, max_tile_pixels), interpolation="nearest")
+        if caption is not None:
+            axis.text(
+                0.0,
+                GALLERY_CAPTION_OFFSET,
+                caption,
+                transform=axis.transAxes,
+                fontsize=GALLERY_CAPTION_FONT_SIZE,
+                va="top",
+            )
+
+    def render_image_comparison(self, panels: List[Tuple[str, str]], title: str, output_path: str) -> None:
+        if not panels:
+            raise ValueError("render_image_comparison requires at least one panel")
+
+        fig, axes = plt.subplots(
+            1,
+            len(panels),
+            figsize=(len(panels) * COMPARISON_PANEL_WIDTH_INCHES, COMPARISON_PANEL_HEIGHT_INCHES),
+        )
+        for axis, panel in zip(np.atleast_1d(axes).ravel(), panels, strict=True):
+            self._draw_comparison_panel(axis, panel)
+
+        fig.suptitle(title, fontsize=COMPARISON_TITLE_FONT_SIZE)
+        self._save_figure(fig, output_path)
+
+    @staticmethod
+    def _draw_comparison_panel(axis: Any, panel: Tuple[str, str]) -> None:
+        image_path, caption = panel
+        axis.axis("off")
+        axis.imshow(plt.imread(image_path), interpolation="nearest")
+        axis.text(
+            0.0,
+            COMPARISON_CAPTION_OFFSET,
+            caption,
+            transform=axis.transAxes,
+            fontsize=COMPARISON_CAPTION_FONT_SIZE,
+            va="top",
+        )
 
     def render_narrative_arc(self, arc: NarrativeArc, output_path: str) -> None:
         fig, axes = plt.subplots(5, 1, figsize=NARRATIVE_ARC_FIGURE_SIZE)
