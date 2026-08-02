@@ -23,6 +23,7 @@ LOSSLESS_BOOK="dickens/a_christmas_carol.txt"
 LOSSLESS_PAGE="reports/figures/lossless_a_christmas_carol.png"
 LOSSLESS_ROUND_TRIP="artifacts/encoded/a_christmas_carol_recovered.txt"
 LOSSLESS_CORPUS_DIR="reports/figures/lossless"
+SCALING_MANIFEST="reports/data/authorship_scaling.json"
 TWO_WAYS_BOOK="darwin__origin_of_species"
 TWO_WAYS_TITLE="On the Origin of Species — two ways to colour a book"
 BOOK_SUMMARY="A lighthouse keeper on a fog-bound coast befriends the ghost of a drowned sailor."
@@ -397,6 +398,8 @@ stage_authorship() {
   local scaling_flags=()
   if [ "${REFRESH_SCALING}" = "true" ]; then
     scaling_flags=(--refresh-scaling)
+  else
+    echo "Reusing committed ${SCALING_MANIFEST}; --refresh-scaling re-runs the 24-training sweep (hours)"
   fi
   run tox -e authorship -- \
     --config configs/documents.yaml \
