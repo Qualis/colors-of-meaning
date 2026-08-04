@@ -1,12 +1,15 @@
 from collections import Counter
 from typing import Any, List, Tuple
 
+import numpy as np
 import numpy.typing as npt
 
 from colors_of_meaning.application.use_case.encode_document_use_case import EncodeDocumentUseCase
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
 from colors_of_meaning.domain.service.color_mapper import ColorMapper
 from colors_of_meaning.domain.service.distance_calculator import DistanceCalculator
+
+VALIDATION_BLOCK_SIZE = 1024
 
 
 class ValidationAccuracyCheckpointSelector:
@@ -37,22 +40,23 @@ class ValidationAccuracyCheckpointSelector:
 
     def _validation_accuracy(self, color_mapper: ColorMapper, checkpoint: Any) -> float:
         color_mapper.restore_checkpoint(checkpoint)
-        train_documents = self._encode(self.train_embeddings, "train")
-        validation_documents = self._encode(self.validation_embeddings, "validation")
-        predictions = [self._predict(document, train_documents) for document in validation_documents]
+        train_documents = self.encode_use_case.execute_per_embedding(self.train_embeddings, "train")
+        validation_documents = self.encode_use_case.execute_per_embedding(self.validation_embeddings, "validation")
+        predictions = self._predict_all(validation_documents, train_documents)
         return self._accuracy(self.validation_labels, predictions)
 
-    def _encode(self, embeddings: npt.NDArray, prefix: str) -> List[ColoredDocument]:
-        return [
-            self.encode_use_case.execute(embeddings[index : index + 1], document_id=f"{prefix}_{index}")
-            for index in range(len(embeddings))
-        ]
+    def _predict_all(
+        self, validation_documents: List[ColoredDocument], train_documents: List[ColoredDocument]
+    ) -> List[int]:
+        predictions: List[int] = []
+        for start in range(0, len(validation_documents), VALIDATION_BLOCK_SIZE):
+            block = validation_documents[start : start + VALIDATION_BLOCK_SIZE]
+            distances = self.distance_calculator.compute_distance_matrix(block, train_documents)
+            predictions.extend(self._predict(row) for row in distances)
+        return predictions
 
-    def _predict(self, document: ColoredDocument, train_documents: List[ColoredDocument]) -> int:
-        ranked = sorted(
-            range(len(train_documents)),
-            key=lambda index: self.distance_calculator.compute_distance(document, train_documents[index]),
-        )
+    def _predict(self, distances_to_train: npt.NDArray) -> int:
+        ranked = np.argsort(distances_to_train, kind="stable")
         neighbours = [int(self.train_labels[index]) for index in ranked[: self.k]]
         return int(Counter(neighbours).most_common(1)[0][0])
 

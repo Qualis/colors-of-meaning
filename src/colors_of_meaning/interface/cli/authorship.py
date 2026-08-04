@@ -71,6 +71,7 @@ class AuthorshipArgs:
     scaling_seeds: int = 8
     scaling_caps: List[int] = field(default_factory=lambda: [60, 150, 300])
     scaling_scratch_dir: str = "artifacts/scaling_sweep"
+    scaling_workers: int = 1
     scaling_manifest: str = "reports/data/authorship_scaling.json"
     output_path: str = "reports/documents_authorship.md"
 
@@ -167,6 +168,7 @@ def _build_scaling_sweep(
         caps=args.scaling_caps,
         seeds=args.scaling_seeds,
         scratch_dir=args.scaling_scratch_dir,
+        scaling_workers=args.scaling_workers,
     )
     return sweep.run
 

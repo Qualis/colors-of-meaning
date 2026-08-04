@@ -486,13 +486,30 @@ colour vs TF-IDF results) from a real held-out train/eval, mirroring how `eval_s
 `eval_results.md`; the narrative prose is a fixed template. The multi-seed data-scaling table is read
 from the committed [`reports/data/authorship_scaling.json`](reports/data/authorship_scaling.json)
 manifest by default, so the report regenerates fast without re-training; `--refresh-scaling` re-runs
-the long, non-CI 8-seed × 3-cap training sweep and rewrites the manifest:
+the non-CI 8-seed × 3-cap training sweep and rewrites the manifest:
 
 ```bash
 tox -e authorship -- --config configs/documents.yaml \
   --model-path artifacts/models/projector_documents_valsel.pth --codebook-name codebook_documents_valsel \
   --mapper-type supervised --paragraphs-per-work 60
 ```
+
+That sweep is 24 trainings, and it used to be a generator in name only: checkpoint selection called
+`scipy`'s Jensen-Shannon once per (validation, train) pair — 537 million calls per cap-60 training at
+61 µs each — which projected to **626 h**. Selection now computes the whole query × reference matrix
+in one vectorised, union-of-support pass (990× faster per pair), so a cap-60 training takes
+**9 minutes instead of 9.5 hours** and the full sweep is ~7 h serially or ~2 h with
+`--scaling-workers 4`.
+
+The vectorised distances match the per-pair originals to within one ulp element-wise, and they are
+*more* faithful: the old dense path's last digit depended on which colour bin held a document's
+mass, so its k-NN ranked equidistant documents by a rounding artifact that changes under a
+semantics-preserving relabelling of bins. Predictions therefore differ on rows where distance does
+not determine the neighbour set at all — which also means the committed scaling manifest was never
+bit-reproducible in principle. The measurements, the equivalence argument and a
+first-attempt acceptance test that turned out to be vacuous are all written up in
+[`.specs/038-authorship-sweep-performance/BENCHMARK.md`](.specs/038-authorship-sweep-performance/BENCHMARK.md);
+`tox -- -m benchmark` re-runs the timing test behind them.
 
 Because `./documents/` is git-ignored, these are local, opt-in runs not regenerated in CI. Book
 generation (`reports/book/*`) is the one authored artifact with **no** reproducible command: it is

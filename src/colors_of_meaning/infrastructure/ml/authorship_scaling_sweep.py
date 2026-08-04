@@ -1,8 +1,13 @@
+import logging
+import time
+import uuid
+from concurrent.futures import Executor, ProcessPoolExecutor
 from pathlib import Path
-from typing import List, Tuple, cast
+from typing import Callable, Dict, List, Optional, Tuple, cast
 
 import numpy as np
 import numpy.typing as npt
+import torch
 
 from colors_of_meaning.application.use_case.encode_document_use_case import (
     EncodeDocumentUseCase,
@@ -47,6 +52,20 @@ from colors_of_meaning.shared.synesthetic_config import (
     SynestheticConfig,
 )
 
+logger = logging.getLogger(__name__)
+
+TrainingJob = Tuple[int, int]
+TrainingOutcome = Tuple[float, int]
+ExecutorFactory = Callable[[int], Executor]
+
+
+def pin_worker_torch_threads() -> None:
+    torch.set_num_threads(1)
+
+
+def create_scaling_process_pool(workers: int) -> Executor:
+    return ProcessPoolExecutor(max_workers=workers, initializer=pin_worker_torch_threads)
+
 
 class AuthorshipScalingSweep:
     def __init__(
@@ -64,6 +83,8 @@ class AuthorshipScalingSweep:
         caps: List[int],
         seeds: int,
         scratch_dir: str,
+        scaling_workers: int = 1,
+        executor_factory: Optional[ExecutorFactory] = None,
     ) -> None:
         self.config = config
         self.reference_adapter = reference_adapter
@@ -78,23 +99,57 @@ class AuthorshipScalingSweep:
         self.caps = caps
         self.seeds = seeds
         self.scratch_dir = scratch_dir
+        self.scaling_workers = scaling_workers
+        self.executor_factory = executor_factory or create_scaling_process_pool
 
     def run(self) -> List[AuthorshipScalingPoint]:
-        return [self._point_for_cap(cap) for cap in self.caps]
+        outcomes = self._execute_grid()
+        return [self._point_for_cap(cap, outcomes) for cap in self.caps]
 
-    def _point_for_cap(self, cap: int) -> AuthorshipScalingPoint:
-        outcomes = [self._train_and_eval(cap, seed) for seed in range(self.seeds)]
-        accuracies = [accuracy for accuracy, _count in outcomes]
+    def _grid(self) -> List[TrainingJob]:
+        return [(cap, seed) for cap in self.caps for seed in range(self.seeds)]
+
+    def _execute_grid(self) -> Dict[TrainingJob, TrainingOutcome]:
+        if self.scaling_workers <= 1:
+            return {job: self._train_and_eval(*job) for job in self._grid()}
+        return self._execute_grid_in_parallel()
+
+    def _execute_grid_in_parallel(self) -> Dict[TrainingJob, TrainingOutcome]:
+        jobs = self._grid()
+        with self.executor_factory(self.scaling_workers) as executor:
+            submitted = [executor.submit(self._train_and_eval, cap, seed) for cap, seed in jobs]
+            return {job: future.result() for job, future in zip(jobs, submitted, strict=True)}
+
+    def _point_for_cap(self, cap: int, outcomes: Dict[TrainingJob, TrainingOutcome]) -> AuthorshipScalingPoint:
+        ordered = [outcomes[(cap, seed)] for seed in range(self.seeds)]
+        accuracies = [accuracy for accuracy, _count in ordered]
         return AuthorshipScalingPoint(
             paragraphs_per_work=cap,
-            train_paragraphs=outcomes[0][1],
+            train_paragraphs=ordered[0][1],
             mean_accuracy=float(np.mean(accuracies)),
             std_accuracy=float(np.std(accuracies)),
         )
 
-    def _train_and_eval(self, cap: int, seed: int) -> Tuple[float, int]:
+    def _train_and_eval(self, cap: int, seed: int) -> TrainingOutcome:
+        started_at = time.perf_counter()
         mapper, codebook, train_count = self._train_projector(cap, seed)
-        return self._held_out_accuracy(mapper, codebook), train_count
+        accuracy = self._held_out_accuracy(mapper, codebook)
+        self._log_completed_training(cap, seed, train_count, accuracy, time.perf_counter() - started_at)
+        return accuracy, train_count
+
+    @staticmethod
+    def _log_completed_training(cap: int, seed: int, train_count: int, accuracy: float, elapsed: float) -> None:
+        logger.info(
+            "Completed scaling sweep training",
+            extra={
+                "correlation_id": str(uuid.uuid4()),
+                "paragraphs_per_work": cap,
+                "seed": seed,
+                "train_paragraphs": train_count,
+                "accuracy": accuracy,
+                "elapsed_seconds": round(elapsed, 1),
+            },
+        )
 
     def _train_projector(self, cap: int, seed: int) -> Tuple[ColorMapper, ColorCodebook, int]:
         adapter = self._corpus_at_cap(cap)

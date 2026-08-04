@@ -47,4 +47,4 @@ class QuantizedColorMapper:
 
     def embed_batch_to_bins(self, embeddings: npt.NDArray) -> List[int]:
         lab_colors = self.color_mapper.embed_batch_to_lab(embeddings)
-        return [self.codebook.quantize(color) for color in lab_colors]
+        return [int(bin_index) for bin_index in self.codebook.quantize_batch(lab_colors)]

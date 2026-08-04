@@ -18,6 +18,19 @@ class EncodeDocumentUseCase:
             document_id=document_id,
         )
 
+    def execute_per_embedding(self, sentence_embeddings: npt.NDArray, document_id_prefix: str) -> List[ColoredDocument]:
+        color_bins = self.quantized_mapper.embed_batch_to_bins(sentence_embeddings)
+        num_bins = self.quantized_mapper.codebook.num_bins
+
+        return [
+            ColoredDocument.from_color_sequence(
+                color_sequence=[color_bin],
+                num_bins=num_bins,
+                document_id=f"{document_id_prefix}_{index}",
+            )
+            for index, color_bin in enumerate(color_bins)
+        ]
+
     def execute_batch(
         self, sentence_embeddings_list: List[npt.NDArray], document_ids: List[str]
     ) -> List[ColoredDocument]:

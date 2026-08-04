@@ -6,6 +6,8 @@ import numpy.typing as npt
 
 from colors_of_meaning.domain.model.lab_color import LabColor
 
+QUANTIZE_CHUNK_SIZE = 512
+
 
 @dataclass(frozen=True)
 class ColorCodebook:
@@ -23,9 +25,21 @@ class ColorCodebook:
         return np.array([[color.l, color.a, color.b] for color in self.colors], dtype=np.float64)
 
     def quantize(self, color: LabColor) -> int:
-        query = np.array([color.l, color.a, color.b], dtype=np.float64)
-        squared_distances = np.sum((self._palette_coordinates - query) ** 2, axis=1)
-        return int(np.argmin(squared_distances))
+        return int(self.quantize_batch([color])[0])
+
+    def quantize_batch(self, colors: List[LabColor]) -> npt.NDArray[np.int64]:
+        queries = np.array([[color.l, color.a, color.b] for color in colors], dtype=np.float64).reshape(-1, 3)
+        chunks = [
+            self._nearest_palette_indices(queries[start : start + QUANTIZE_CHUNK_SIZE])
+            for start in range(0, len(queries), QUANTIZE_CHUNK_SIZE)
+        ]
+        return np.concatenate(chunks) if chunks else np.empty(0, dtype=np.int64)
+
+    def _nearest_palette_indices(self, queries: npt.NDArray[np.float64]) -> npt.NDArray[np.int64]:
+        squared_distances: npt.NDArray[np.float64] = np.sum(
+            (self._palette_coordinates[None, :, :] - queries[:, None, :]) ** 2, axis=2
+        )
+        return np.asarray(np.argmin(squared_distances, axis=1), dtype=np.int64)
 
     def get_color(self, bin_index: int) -> LabColor:
         if not 0 <= bin_index < self.num_bins:

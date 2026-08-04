@@ -148,6 +148,20 @@ class TestBuildScalingSweep:
 
         assert result is sweep.return_value.run
 
+    def test_should_default_the_sweep_to_a_single_worker(self, mocker) -> None:
+        sweep = mocker.patch(f"{MODULE}.AuthorshipScalingSweep")
+
+        _build_scaling_sweep(AuthorshipArgs(), Mock(), Mock(), Mock())
+
+        assert sweep.call_args.kwargs["scaling_workers"] == 1
+
+    def test_should_pass_the_requested_scaling_workers_to_the_sweep(self, mocker) -> None:
+        sweep = mocker.patch(f"{MODULE}.AuthorshipScalingSweep")
+
+        _build_scaling_sweep(AuthorshipArgs(scaling_workers=4), Mock(), Mock(), Mock())
+
+        assert sweep.call_args.kwargs["scaling_workers"] == 4
+
 
 class TestReportRows:
     def test_should_render_a_row_per_author(self) -> None:

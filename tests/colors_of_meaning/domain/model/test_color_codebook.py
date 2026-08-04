@@ -46,6 +46,31 @@ class TestColorCodebook:
 
         assert bin_index == 0
 
+    def test_should_quantize_a_batch_of_colors_to_their_nearest_bins(self) -> None:
+        codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=8)
+        colors = [codebook.colors[index] for index in (0, 100, 511)]
+
+        assert list(codebook.quantize_batch(colors)) == [0, 100, 511]
+
+    def test_should_match_the_single_color_path_when_quantizing_a_batch(self) -> None:
+        codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=8)
+        generator = np.random.default_rng(5)
+        samples = generator.uniform([0.0, -128.0, -128.0], [100.0, 127.0, 127.0], size=(1500, 3))
+        colors = [LabColor(l=float(row[0]), a=float(row[1]), b=float(row[2])) for row in samples]
+
+        assert list(codebook.quantize_batch(colors)) == [codebook.quantize(color) for color in colors]
+
+    def test_should_return_an_empty_result_when_quantizing_no_colors(self) -> None:
+        codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=2)
+
+        assert codebook.quantize_batch([]).shape == (0,)
+
+    def test_should_match_first_minimum_when_batch_distances_tie(self) -> None:
+        colors = [LabColor(l=40.0, a=0.0, b=0.0), LabColor(l=60.0, a=0.0, b=0.0)]
+        codebook = ColorCodebook(colors=colors, num_bins=2)
+
+        assert list(codebook.quantize_batch([LabColor(l=50.0, a=0.0, b=0.0)])) == [0]
+
     def test_should_quantize_identically_to_uniform_grid_baseline_when_color_in_range(self) -> None:
         codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=8)
         query = LabColor(l=37.0, a=11.0, b=-23.0)

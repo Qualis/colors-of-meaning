@@ -1,3 +1,4 @@
+import pickle
 from unittest.mock import Mock, patch
 import numpy as np
 from typing import List
@@ -106,3 +107,17 @@ class TestSentenceEmbeddingAdapter:
 
         mock_sentence_transformer.assert_called_once_with("test-model")
         assert adapter._model is not None
+
+
+class TestPickling:
+    def test_should_drop_the_lazily_loaded_model_when_pickled(self) -> None:
+        adapter = SentenceEmbeddingAdapter(model_name="test-model")
+        adapter._model = Mock()
+
+        assert adapter.__getstate__()["_model"] is None
+
+    def test_should_keep_the_model_name_when_pickled(self) -> None:
+        adapter = SentenceEmbeddingAdapter(model_name="test-model")
+        adapter._model = Mock()
+
+        assert pickle.loads(pickle.dumps(adapter)).model_name == "test-model"  # nosec B301  # nosemgrep

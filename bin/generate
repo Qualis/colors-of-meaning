@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 DOCUMENTS_DIR="./documents"
 PARAGRAPHS_PER_WORK="60"
 REFRESH_SCALING="false"
+SCALING_WORKERS="1"
 RETRAIN="false"
 WITH_BOOK="false"
 DRY_RUN="false"
@@ -95,7 +96,8 @@ usage() {
   echo "  --only <stage>        Run only this stage (repeatable)"
   echo "  --skip <stage>        Skip this stage (repeatable)"
   echo "  --documents-dir <p>   Authored corpus location (default: ${DOCUMENTS_DIR})"
-  echo "  --refresh-scaling     Re-run the long 8-seed authorship scaling sweep"
+  echo "  --refresh-scaling     Re-run the 24-training authorship scaling sweep"
+  echo "  --scaling-workers <n> Train the sweep grid across n processes (default: ${SCALING_WORKERS})"
   echo "  --retrain             Retrain the projectors even when their artifacts exist"
   echo "  --with-book           Also run the book stage (spends a live LLM call)"
   echo "  --dry-run             Print the commands without running them"
@@ -128,6 +130,9 @@ handle_options() {
         DOCUMENTS_DIR="$2"; shift 2 ;;
       --refresh-scaling)
         REFRESH_SCALING="true"; shift ;;
+      --scaling-workers)
+        [ $# -ge 2 ] || { echo "Error: $1 requires a value" >&2; exit 1; }
+        SCALING_WORKERS="$2"; shift 2 ;;
       --retrain)
         RETRAIN="true"; shift ;;
       --with-book)
@@ -398,8 +403,10 @@ stage_authorship() {
   local scaling_flags=()
   if [ "${REFRESH_SCALING}" = "true" ]; then
     scaling_flags=(--refresh-scaling)
+    echo "Re-running the 24-training scaling sweep across ${SCALING_WORKERS} worker(s); ~7 h at 1 worker"
   else
-    echo "Reusing committed ${SCALING_MANIFEST}; --refresh-scaling re-runs the 24-training sweep (hours)"
+    echo "Reusing committed ${SCALING_MANIFEST}; --refresh-scaling re-runs the 24-training sweep (~7 h serial,"
+    echo "  ~2 h at --scaling-workers 4)"
   fi
   run tox -e authorship -- \
     --config configs/documents.yaml \
@@ -409,6 +416,7 @@ stage_authorship() {
     --documents-dir "${DOCUMENTS_DIR}" \
     --paragraphs-per-work "${PARAGRAPHS_PER_WORK}" \
     --distance jensen_shannon \
+    --scaling-workers "${SCALING_WORKERS}" \
     "${scaling_flags[@]}"
 }
 

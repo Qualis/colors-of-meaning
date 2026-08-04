@@ -56,6 +56,37 @@ class TestEncodeDocumentUseCase:
         _assert_batch_results(results)
         _assert_batch_sequences(results)
 
+    def test_should_encode_one_document_per_embedding_row_in_a_single_pass(self) -> None:
+        mock_quantized_mapper = Mock()
+        mock_quantized_mapper.embed_batch_to_bins.return_value = [2, 0, 1]
+        mock_quantized_mapper.codebook.num_bins = 3
+        embeddings = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+
+        results = EncodeDocumentUseCase(mock_quantized_mapper).execute_per_embedding(embeddings, "train")
+
+        assert [document.color_sequence for document in results] == [[2], [0], [1]]
+
+    def test_should_name_each_per_embedding_document_by_its_row_index(self) -> None:
+        mock_quantized_mapper = Mock()
+        mock_quantized_mapper.embed_batch_to_bins.return_value = [2, 0]
+        mock_quantized_mapper.codebook.num_bins = 3
+
+        results = EncodeDocumentUseCase(mock_quantized_mapper).execute_per_embedding(
+            np.array([[1.0, 2.0], [3.0, 4.0]]), "validation"
+        )
+
+        assert [document.document_id for document in results] == ["validation_0", "validation_1"]
+
+    def test_should_embed_all_rows_with_one_batched_call_when_encoding_per_embedding(self) -> None:
+        mock_quantized_mapper = Mock()
+        mock_quantized_mapper.embed_batch_to_bins.return_value = [2, 0]
+        mock_quantized_mapper.codebook.num_bins = 3
+        embeddings = np.array([[1.0, 2.0], [3.0, 4.0]])
+
+        EncodeDocumentUseCase(mock_quantized_mapper).execute_per_embedding(embeddings, "train")
+
+        mock_quantized_mapper.embed_batch_to_bins.assert_called_once_with(embeddings)
+
     def test_should_raise_error_when_batch_sizes_mismatch(self) -> None:
         mock_quantized_mapper = Mock()
         mock_quantized_mapper.codebook.num_bins = 3
