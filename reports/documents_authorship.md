@@ -98,9 +98,9 @@ on the same fixed test set (multiple seeds each; mean ± population std):
 
 | paragraphs_per_work | train paragraphs | test accuracy (mean ± std) | × chance |
 |---|---|---|---|
-| 60 | 5340 | 0.092 ± 0.016 | 2.02× |
-| 150 | 13339 | 0.128 ± 0.022 | 2.82× |
-| 300 | 25452 | 0.149 ± 0.023 | 3.28× |
+| 60 | 5340 | 0.127 ± 0.016 | 2.79× |
+| 150 | 13339 | 0.141 ± 0.012 | 3.10× |
+| 300 | 25452 | 0.183 ± 0.018 | 4.03× |
 
 ## Reproduce (local; requires `./documents/`)
 

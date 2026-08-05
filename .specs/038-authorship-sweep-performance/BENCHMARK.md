@@ -65,16 +65,46 @@ from the measured distance cost at their shapes plus the measured constant held-
 | | total |
 |---|---|
 | before (spec's projection) | **626 h — 26 days** |
-| after, `--scaling-workers 1` | **~7 h** |
-| after, `--scaling-workers 4` | **~2 h** |
+| after, `--scaling-workers 1` | **~7 h** (projected from the measured cap-60 training) |
+| after, `--scaling-workers 4` | **under 7 h, but not 7/4** — see below |
 
 The 4-worker path was run for real, not only projected: a full 8-seed cap-60 sweep completed in
-**3,185.9 s (53 min)** as two waves of four workers. That figure is pessimistic — the machine was
-simultaneously running `tox` and other work at load ~20 — and it is what confirms that the process
-pool, the `__getstate__` that keeps 90 MB of embedder weights out of every pickled task, and the
-deterministic `(cap, seed)` reassembly all work end to end.
+**3,185.9 s (53 min)** as two waves of four workers. Ideal 4× scaling of the measured 9.0 min
+training would have been 18 min, so **parallelism delivered about 1.4× here, not 4×** — the machine
+was simultaneously running `tox` at load ~20, and cap 300 is memory-bound besides (~1.6 GB per
+worker). Do not read "~7 h serial" and divide by the worker count. What the run does establish is
+that the process pool, the `__getstate__` that keeps 90 MB of embedder weights out of every pickled
+task, and the deterministic `(cap, seed)` reassembly all work end to end.
 
-## Reproducing the committed manifest — it does not reproduce
+Only the cap-60 training and this 8-seed cap-60 sweep are measured. Every other row in the table
+above is projected from them, and the projections are unvalidated at caps 150 and 300.
+
+## Reproducing the committed manifest — it did not, so it was re-run
+
+> **Resolved after this spec landed.** The full 24-training sweep was run on this code and
+> `reports/data/authorship_scaling.json` was rewritten from its output:
+>
+> | cap | was | now |
+> |---|---|---|
+> | 60 | 0.092 ± 0.016 | **0.1267 ± 0.0161** |
+> | 150 | 0.128 ± 0.022 | **0.1407 ± 0.0118** |
+> | 300 | 0.149 ± 0.023 | **0.1833 ± 0.0178** |
+>
+> The cap-60 row is bit-identical to the 8-seed measurement recorded below, so the sweep reproduces
+> itself.
+>
+> "More data helps" survives — the new curve is monotone at 2.79× → 3.10× → 4.03× chance — but it
+> did **not** strengthen. Comparing old and new at a *fixed* cap (2.02× → 2.79× at cap 60) measures
+> the level shift between two manifests, not the slope of the scaling curve. Read within each
+> manifest, the trend is flat-to-weaker: the absolute gain across the range is unchanged (+0.0570
+> old, +0.0566 new), the relative gain falls from 1.62× to 1.45×, and the shape moved — the cap
+> 60 → 150 step collapsed from +0.036 to +0.014, inside the per-seed spread, while 150 → 300 grew
+> from +0.021 to +0.043. This vindicates the caution recorded further down that "the *shape* of
+> the 'more data helps' claim may be affected, not merely its offset".
+>
+> The rest of this section is the original finding, kept because it is what motivated the re-run.
+
+### The original finding
 
 Spec 038's Open Question 2 asked whether today's code reproduces
 `reports/data/authorship_scaling.json`, whose cap-60 row was produced by an unknown historical run.
@@ -103,10 +133,11 @@ from 73 works to 133 in spec 027, and the supervised mapper and split have both 
 manifest was written. Identifying the cause needs a bisect, not a benchmark, and that is a spec of
 its own.
 
-**The manifest was deliberately left untouched.** Rewriting it would change published numbers in
-`README.MD` and `reports/documents_authorship.md`, which spec 038 explicitly freezes. Re-validating
-the data-scaling claim is now cheap — a full 24-training sweep is ~2 h at 4 workers instead of 26
-days — but it is a separate decision with its own re-validation, and it belongs in its own spec.
+**The manifest was left untouched by spec 038 itself**, because rewriting it changes published
+numbers that this spec freezes. It was re-run immediately afterwards as a separate, deliberate step —
+see the note at the top of this section. That is the whole point of the feature: re-validating the
+data-scaling claim went from 26 days to ~2 h at 4 workers, so a stale manifest became something you
+fix by running the generator rather than something you document as a known defect.
 
 ## Memory
 
@@ -146,8 +177,10 @@ documents is a positional rounding artifact. The artifact is provably meaningles
 is invariant under relabelling bins, yet applying the same permutation to both documents changes
 the legacy value (2 of 6 random trials). The vectorised value is invariant, and is the one within
 one ulp of truth; legacy's other value is two ulp out. Since the split originates in numpy's
-internal summation blocking — version- and SIMD-dependent — the committed manifest was never
-bit-reproducible in principle.
+internal summation blocking — version- and SIMD-dependent — the manifest that was committed *at the
+time this was written* (`0.092 / 0.128 / 0.149`) was never bit-reproducible in principle. The
+manifest committed now was produced by this code and does reproduce; see the top of the previous
+section.
 
 What is asserted instead, all committed as tests:
 

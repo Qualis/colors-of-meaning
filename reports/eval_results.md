@@ -4,7 +4,7 @@ Committed evidence for the color method against the TF-IDF and HNSW baselines at
 budget and split. Every row is produced by the command below; the sliced-Wasserstein proxy is only
 trusted once it clears the fidelity gate.
 
-Library versions: numpy 2.4.6, scipy 1.17.1, POT 0.9.6.post1.
+Library versions: numpy 2.4.6, scipy 1.17.1, POT 0.9.7.
 
 ## Distance proxy fidelity gate
 
@@ -18,15 +18,15 @@ Classification metrics for every method; label-based MRR and recall@k for the re
 
 | dataset | method | distance | budget | accuracy | macro_f1 | bits/token | mrr | recall@k | seconds |
 |---|---|---|---|---|---|---|---|---|---|
-| ag_news | color | sliced | 4000 | 0.8175 | 0.8178 | 12.00 | 0.8490 | 1:0.7847 5:0.9360 10:0.9688 | 419.1 |
-| ag_news | tfidf | sliced | 4000 | 0.8630 | 0.8624 | n/a | n/a | n/a | 8.4 |
-| ag_news | hnsw | sliced | 4000 | 0.8890 | 0.8890 | 12288.00 | 0.9046 | 1:0.8575 5:0.9657 10:0.9830 | 36.6 |
-| imdb | color | sliced | 600 | 0.5483 | 0.5478 | 12.00 | 0.7206 | 1:0.5500 5:0.9667 10:0.9983 | 164.0 |
-| imdb | tfidf | sliced | 600 | 0.7767 | 0.7765 | n/a | n/a | n/a | 4.7 |
-| imdb | hnsw | sliced | 600 | 0.6417 | 0.6265 | 12288.00 | 0.7566 | 1:0.6100 5:0.9500 10:0.9967 | 22.0 |
-| newsgroups | color | sliced | 600 | 0.1650 | 0.1535 | 12.00 | 0.2763 | 1:0.1600 5:0.4317 10:0.6067 | 112.2 |
-| newsgroups | tfidf | sliced | 600 | 0.4517 | 0.4058 | n/a | n/a | n/a | 2.7 |
-| newsgroups | hnsw | sliced | 600 | 0.5867 | 0.5637 | 12288.00 | 0.6363 | 1:0.5150 5:0.8050 10:0.8900 | 14.8 |
+| ag_news | color | sliced | 4000 | 0.8175 | 0.8178 | 12.00 | 0.8490 | 1:0.7847 5:0.9360 10:0.9688 | 610.5 |
+| ag_news | tfidf | sliced | 4000 | 0.8630 | 0.8624 | n/a | n/a | n/a | 10.7 |
+| ag_news | hnsw | sliced | 4000 | 0.8890 | 0.8890 | 12288.00 | 0.9046 | 1:0.8575 5:0.9657 10:0.9830 | 59.7 |
+| imdb | color | sliced | 600 | 0.5483 | 0.5478 | 12.00 | 0.7206 | 1:0.5500 5:0.9667 10:0.9983 | 182.5 |
+| imdb | tfidf | sliced | 600 | 0.7767 | 0.7765 | n/a | n/a | n/a | 4.4 |
+| imdb | hnsw | sliced | 600 | 0.6417 | 0.6265 | 12288.00 | 0.7566 | 1:0.6100 5:0.9500 10:0.9967 | 26.5 |
+| newsgroups | color | sliced | 600 | 0.1650 | 0.1535 | 12.00 | 0.2763 | 1:0.1600 5:0.4317 10:0.6067 | 183.3 |
+| newsgroups | tfidf | sliced | 600 | 0.4517 | 0.4058 | n/a | n/a | n/a | 3.1 |
+| newsgroups | hnsw | sliced | 600 | 0.5867 | 0.5637 | 12288.00 | 0.6363 | 1:0.5150 5:0.8050 10:0.8900 | 19.8 |
 
 ## Reproduce
 

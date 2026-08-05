@@ -49,6 +49,11 @@ ascending index through Python's stable `sorted`.
 This feature makes the sweep finish **without changing a single number**. It is a performance
 refactor with an exact-equivalence obligation, not a change of method.
 
+> **This framing did not survive implementation.** The premise below — that every disjoint pair is
+> an exact tie — is false, and with it the "no number may change" obligation. See "Equivalence is
+> not achievable as written". The method is unchanged; some numbers moved anyway, and the manifest
+> was subsequently re-run rather than frozen.
+
 ## Core Concepts
 
 - **Checkpoint selection** — choosing the epoch whose projector maximises held-out authorship
@@ -69,6 +74,9 @@ refactor with an exact-equivalence obligation, not a change of method.
   data-scaling claim has a generator that can actually be run rather than only cited.
 - As a reviewer, I can see evidence that the optimised sweep reproduces the committed
   `0.092 / 0.128 / 0.149` rather than being asked to trust that it would.
+  *(Not met, and it could not be: those numbers were never reproducible by anyone — see
+  "Equivalence is not achievable as written". The manifest was re-run instead, and now holds
+  `0.127 / 0.141 / 0.183`, which the sweep does reproduce.)*
 - As a contributor on a laptop, the sweep still runs correctly single-threaded; parallelism is
   opt-in, not assumed.
 
@@ -163,7 +171,7 @@ continues to depend only on the port.
 
 | decision | rationale |
 |---|---|
-| Exact refactor, semantics frozen | The committed `0.092 / 0.128 / 0.149` must remain reproducible; a faster sweep that changes the answer proves nothing |
+| Exact refactor, semantics frozen | The committed `0.092 / 0.128 / 0.149` must remain reproducible; a faster sweep that changes the answer proves nothing. **This premise was false** — those numbers were never reproducible, so the manifest was re-run rather than frozen |
 | Concrete default on the port | Existing calculators keep working; only Jensen-Shannon specialises |
 | Union-of-support, not one-hot special case | Correct for any histogram; the one-hot speedup falls out rather than being assumed |
 | stdlib `concurrent.futures` | No new locked/audited dependency |
@@ -202,10 +210,14 @@ Full numbers in [BENCHMARK.md](BENCHMARK.md).
    The per-seed spread matches (0.0161 vs 0.016), so it is not seed noise — the two means are about
    six standard errors apart. As this spec proposed, that is treated as a finding about the
    committed manifest rather than about this refactor, and the equivalence evidence is what
-   separates the two: the optimised selector's predictions are element-wise identical to the
-   per-pair reference, so nothing here can move an accuracy number. The manifest is deliberately
-   left untouched, because rewriting it would change published numbers this spec freezes.
-   Re-validating the data-scaling claim is now cheap and deserves its own spec.
+   separates the two: predictions change only where distance does not determine the neighbour set,
+   which cannot account for a gap that size. **Resolved after this spec landed** by re-running the
+   full 24-training sweep and rewriting the manifest from its output — 0.1267 / 0.1407 / 0.1833,
+   with the cap-60 row bit-identical to the measurement above. The trend survives rather than
+   collapsing — 2.79× → 3.10× → 4.03× chance across the caps — but it did not strengthen: the whole
+   curve shifted up, while its absolute span held (+0.0570 → +0.0566) and its relative span fell
+   (1.62× → 1.45×). The table is now reproduced from a committed command instead of cited from an
+   unreproducible artifact.
 3. **Whether 8 workers is safe here.** Measured: **4 workers is the right recommendation on this
    machine, not 8.** The limit is memory, not threads. `torch.set_num_threads(1)` per worker is
    implemented and each worker reloads its own embedder (the adapter's `__getstate__` drops the
@@ -272,14 +284,14 @@ and portable.
 | per pair | 61.34 µs | **0.0619 µs** (991×) |
 | one cap-60 checkpoint | ~427 s | **1.45 s** |
 | one cap-60 training | 9.5 h | **9.0 min** (63×) |
-| full 24-training sweep | 626 h (26 days) | **~7 h serial, ~2 h at 4 workers** |
+| full 24-training sweep | 626 h (26 days) | **~7 h serial (projected)** |
 
-Equivalence held: on a real cap-60 split with real checkpoints the optimised selector's predictions
-are element-wise identical to the per-pair reference; every disjoint one-hot pair receives a
-bit-identical distance and every same-bin pair exactly `0.0`. The vectorised value differs from
-scipy's in the last ulp, which is precisely why the acceptance criterion is identical *predictions*
-and not identical distances — the difference is uniform across every tied pair, so no ordering can
-change.
+Equivalence held in the sense that survives scrutiny, which is not the sense this spec originally
+asked for: on a real non-degenerate cap-60 checkpoint the optimised distances match the per-pair
+reference **to within one ulp element-wise**, every same-bin pair is exactly `0.0`, and predictions
+differ **only** where distance does not determine the neighbour set — 14 of 80 rows, all inside the
+77 undetermined ones. See "Equivalence is not achievable as written" above for why element-wise
+identical *predictions* was never attainable by any implementation.
 
 Two blocking constants were added beyond the plan, because cap 300 would otherwise allocate a
 1.2 GB distance matrix per checkpoint and make parallelism impossible:

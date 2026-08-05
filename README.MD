@@ -498,16 +498,29 @@ That sweep is 24 trainings, and it used to be a generator in name only: checkpoi
 `scipy`'s Jensen-Shannon once per (validation, train) pair — 537 million calls per cap-60 training at
 61 µs each — which projected to **626 h**. Selection now computes the whole query × reference matrix
 in one vectorised, union-of-support pass (990× faster per pair), so a cap-60 training takes
-**9 minutes instead of 9.5 hours** and the full sweep is ~7 h serially or ~2 h with
-`--scaling-workers 4`.
+**9 minutes instead of 9.5 hours** — measured end to end. The full 24-training figure is a
+*projection* from that: ~7 h serially, since caps 150 and 300 scale quadratically in the selection
+step. Parallelism helps by less than its worker count — a measured 8-seed cap-60 sweep took 53 min
+at `--scaling-workers 4`, against 18 min of ideal scaling — because cap 300 is memory-bound.
 
 The vectorised distances match the per-pair originals to within one ulp element-wise, and they are
 *more* faithful: the old dense path's last digit depended on which colour bin held a document's
 mass, so its k-NN ranked equidistant documents by a rounding artifact that changes under a
 semantics-preserving relabelling of bins. Predictions therefore differ on rows where distance does
-not determine the neighbour set at all — which also means the committed scaling manifest was never
-bit-reproducible in principle. The measurements, the equivalence argument and a
-first-attempt acceptance test that turned out to be vacuous are all written up in
+not determine the neighbour set at all — which is why the manifest written *before* the sweep was
+runnable could never have been reproduced bit-for-bit by anyone.
+
+So it was re-run rather than patched. The committed manifest is now the output of an actual
+24-training sweep on this code, which shifted the whole data-scaling curve up by roughly three and a
+half points — cap 60 from 0.092 to **0.127**, cap 300 from 0.149 to **0.183**. "More data helps"
+survives, but read it carefully: the *absolute* gain across the range is unchanged (+0.057 then,
++0.057 now), so against the higher baseline the effect is proportionally **weaker** (1.62× → 1.45×),
+and its shape moved — most of the gain now falls between caps 150 and 300 (+0.043) rather than
+between 60 and 150 (+0.014). The larger ×chance multipliers in the report follow from the raised
+baseline, not from a steeper trend. What actually improved is provenance: the table is now
+*reproduced from a committed command* instead of cited from an artifact nobody could regenerate.
+The measurements, the equivalence argument and a first-attempt acceptance test that turned out to be
+vacuous are written up in
 [`.specs/038-authorship-sweep-performance/BENCHMARK.md`](.specs/038-authorship-sweep-performance/BENCHMARK.md);
 `tox -- -m benchmark` re-runs the timing test behind them.
 

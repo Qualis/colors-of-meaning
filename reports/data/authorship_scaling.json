@@ -3,20 +3,20 @@
     {
       "paragraphs_per_work": 60,
       "train_paragraphs": 5340,
-      "mean_accuracy": 0.092,
-      "std_accuracy": 0.016
+      "mean_accuracy": 0.12670454545454546,
+      "std_accuracy": 0.01607395635812026
     },
     {
       "paragraphs_per_work": 150,
       "train_paragraphs": 13339,
-      "mean_accuracy": 0.128,
-      "std_accuracy": 0.022
+      "mean_accuracy": 0.14071969696969697,
+      "std_accuracy": 0.011838257521217357
     },
     {
       "paragraphs_per_work": 300,
       "train_paragraphs": 25452,
-      "mean_accuracy": 0.149,
-      "std_accuracy": 0.023
+      "mean_accuracy": 0.18333333333333335,
+      "std_accuracy": 0.01782719185719711
     }
   ]
 }
