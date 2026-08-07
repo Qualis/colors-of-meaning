@@ -102,7 +102,6 @@ colors_of_meaning/
         evaluate_use_case.py
         visualize_codebook_use_case.py
         visualize_documents_use_case.py
-        coconut_use_case.py
     service/
 
  domain/                            # Business logic
@@ -116,11 +115,9 @@ colors_of_meaning/
         colored_document.py
         evaluation_sample.py
         evaluation_result.py
-        coconut.py
     repository/
         color_codebook_repository.py
         dataset_repository.py
-        coconut_repository.py
     service/
         color_mapper.py
         compression_baseline.py
@@ -150,10 +147,6 @@ colors_of_meaning/
         pq_compression_baseline.py
         wasserstein_distance_calculator.py
         jensen_shannon_distance_calculator.py
-    observability/
-        logger.py
-        metrics.py
-        tracing.py
     persistence/
         file_color_codebook_repository.py
         in_memory/
@@ -169,10 +162,9 @@ colors_of_meaning/
         main.py
         controller/
             health_controller.py
-            coconut_controller.py
             query_controller.py
         data_transfer_object/
-            coconut_data_transfer_object.py
+            health_dto.py
             palette_query_dto.py
     cli/
         train.py
@@ -201,7 +193,7 @@ colors_of_meaning/
 - MUST NOT have side effects (no I/O, no external calls)
 
 **Structure:**
-- `model/` - Domain entities (e.g., `LabColor`, `ColorCodebook`, `ColoredDocument`, `EvaluationResult`, `Coconut`)
+- `model/` - Domain entities (e.g., `LabColor`, `ColorCodebook`, `ColoredDocument`, `EvaluationResult`)
 - `repository/` - Repository interfaces (abstract base classes)
 - `service/` - Domain service interfaces (e.g., `ColorMapper`, `DistanceCalculator`, `Classifier`, `Retriever`, `MetricsCalculator`, `FigureRenderer`, `CompressionBaseline`)
 - `authentication/` - Authentication domain logic
@@ -219,7 +211,7 @@ colors_of_meaning/
 - Handle application-level concerns (transaction boundaries, etc.)
 
 **Structure:**
-- `use_case/` - Use case implementations (e.g., `TrainColorMappingUseCase`, `EncodeDocumentUseCase`, `EvaluateUseCase`, `QueryByPaletteUseCase`, `CoconutUseCase`)
+- `use_case/` - Use case implementations (e.g., `TrainColorMappingUseCase`, `EncodeDocumentUseCase`, `EvaluateUseCase`, `QueryByPaletteUseCase`)
 - `service/` - Application-level services
 
 ### Infrastructure Layer (`infrastructure/`)
@@ -230,7 +222,7 @@ colors_of_meaning/
 - Implement repository interfaces from `domain.repository` and service interfaces from `domain.service`
 - Handle all external integrations (datasets, ML frameworks, APIs)
 - Provide concrete implementations of domain abstractions
-- Include observability implementations (logging, metrics, tracing)
+- Log through the standard-library logger with a `correlation-id` (there is no metrics or tracing backend — see Observability Requirements)
 - Manage security implementations (authentication, authorization)
 
 **Structure:**
@@ -239,8 +231,8 @@ colors_of_meaning/
 - `embedding/` - Sentence-transformers embedding adapter
 - `evaluation/` - Classifier implementations (TF-IDF, HNSW, color histogram) and metrics calculator
 - `visualization/` - Matplotlib figure renderer for codebook palettes, histograms, projections, confusion matrices
-- `persistence/` - Repository implementations (file-based codebook, in-memory)
-- `observability/` - Logging, metrics, tracing
+- `persistence/` - Repository implementations (file-based codebook, JSON scaling manifest, in-memory)
+- `generation/` - Anthropic text generator adapter behind the `TextGenerator` port
 - `security/` - Authentication and authorization implementations
 - `system/` - Health checks and diagnostics
 
@@ -254,34 +246,40 @@ colors_of_meaning/
 - Use Pydantic models for DTOs (request/response shaping)
 - Depend on use cases from application layer
 - Handle HTTP-specific concerns (status codes, headers, etc.)
-- Use FastAPI's `Depends()` alongside Lagom for dependency injection
+- Controllers are built by a factory that receives its use case and closes over it; the container is composed once at import in `api/main.py`
 
 **Structure:**
 - `api/main.py` - FastAPI application setup
-- `api/controller/` - API route controllers (health, coconut, query by palette)
-- `api/data_transfer_object/` - Pydantic DTOs (coconut, palette query)
+- `api/controller/` - API route controllers (health, query by palette)
+- `api/data_transfer_object/` - Pydantic DTOs (health, palette query)
 - `cli/` - Command-line tools (train, encode, compare, compress, eval, visualize, query)
 
 **Example Controller Pattern:**
 ```python
-from fastapi import APIRouter, Depends
-from typing import Annotated
-from application.use_case.coconut_use_case import CoconutUseCase
-from interface.api.data_transfer_object.coconut_dto import CoconutResponse
+from fastapi import APIRouter, status
 
-router = APIRouter()
+from colors_of_meaning.application.use_case.query_by_palette_use_case import QueryByPaletteUseCase
+from colors_of_meaning.interface.api.data_transfer_object.palette_query_dto import (
+    PaletteQueryRequestDTO,
+    PaletteQueryResponseDTO,
+)
 
-def get_use_case() -> CoconutUseCase:
-    # Lagom container resolution here
-    pass
 
-@router.get("/coconuts/{id}")
-async def get_coconut(
-    id: str,
-    use_case: Annotated[CoconutUseCase, Depends(get_use_case)]
-) -> CoconutResponse:
-    coconut = use_case.get_coconut(id)
-    return CoconutResponse.model_validate(coconut)
+def create_query_controller(query_use_case: QueryByPaletteUseCase) -> APIRouter:
+    router = APIRouter(tags=["query"])
+
+    async def query_by_palette(request: PaletteQueryRequestDTO) -> PaletteQueryResponseDTO:
+        matches = query_use_case.execute(palette=request.colors, k=request.k)
+        return PaletteQueryResponseDTO(matches=matches, query_colors=len(request.colors))
+
+    router.add_api_route(
+        "/query/palette",
+        query_by_palette,
+        methods=["POST"],
+        status_code=status.HTTP_200_OK,
+    )
+
+    return router
 ```
 
 ### Shared Layer (`shared/`)
@@ -320,17 +318,17 @@ Base entity tests use `assertpy` (`assert_that`). ML and domain-specific tests m
 ```python
 from assertpy import assert_that
 
-def test_should_return_coconut_when_id_exists(self):
+def test_should_return_codebook_when_name_exists(self):
     # Arrange
-    repository = InMemoryCoconutRepository()
-    use_case = CoconutUseCase(repository)
-    coconut_id = "test-id"
+    repository = InMemoryColorCodebookRepository()
+    codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=4)
+    repository.save(codebook, "codebook_64")
 
     # Act
-    result = use_case.get_coconut(coconut_id)
+    result = repository.load("codebook_64")
 
     # Assert
-    assert_that(result.id).is_equal_to(coconut_id)
+    assert_that(result.num_bins).is_equal_to(64)
 ```
 
 ```python
@@ -358,7 +356,7 @@ def test_should_return_expected_user_schema_when_calling_user_service(self):
 
 **Producer Test Example:**
 ```python
-def test_should_return_coconut_schema_in_get_endpoint_response(self):
+def test_should_return_palette_match_schema_in_query_endpoint_response(self):
     # Test that your API returns expected contract
     pass
 ```
@@ -400,25 +398,25 @@ def test_should_define_repository_interfaces_in_domain(self):
 from lagom import Container
 
 # Define interface in domain
-class CoconutRepository(ABC):
+class ColorCodebookRepository(ABC):
     @abstractmethod
-    def get(self, id: str) -> Coconut:
-        pass
+    def load(self, name: str) -> Optional[ColorCodebook]:
+        raise NotImplementedError
 
 # Implement in infrastructure
-class InMemoryCoconutRepository(CoconutRepository):
-    def get(self, id: str) -> Coconut:
-        # Implementation
-        pass
+class InMemoryColorCodebookRepository(ColorCodebookRepository):
+    def load(self, name: str) -> Optional[ColorCodebook]:
+        return self.codebooks.get(name)
 
 # Configure container
 container = Container()
-container[CoconutRepository] = InMemoryCoconutRepository
+container[ColorCodebookRepository] = InMemoryColorCodebookRepository
 
 # Inject in use case
-class CoconutUseCase:
-    def __init__(self, repository: CoconutRepository):
-        self.repository = repository
+class VisualizeCodebookUseCase:
+    def __init__(self, codebook_repository: ColorCodebookRepository, figure_renderer: FigureRenderer):
+        self.codebook_repository = codebook_repository
+        self.figure_renderer = figure_renderer
 ```
 
 ## Observability Requirements
@@ -558,7 +556,7 @@ Both are committed. There is no `setup.cfg`, `setup.py`, or `requirements.lock`.
 1. Write tests first (TDD approach encouraged)
 2. Implement with one assertion per test
 3. Use dependency injection (Lagom)
-4. Add observability (logging, metrics)
+4. Add structured logging with a `correlation-id`
 5. Ensure no comments - make code self-documenting
 
 ### Before Completing Work
@@ -648,6 +646,6 @@ Work is complete when:
 - [ ] Dependency injection is used throughout
 - [ ] CDCT tests exist for service interactions
 - [ ] Architectural unit tests validate structure
-- [ ] Observability is implemented (logging, metrics, tracing)
+- [ ] Structured logging with a `correlation-id` is in place
 - [ ] No secrets are committed
 - [ ] `__init__.py` files exist in all packages
