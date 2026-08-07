@@ -119,9 +119,9 @@ pytest tests/colors_of_meaning/test_architecture.py -v
 
 To respect layer boundaries while wiring up dependencies:
 
-1. **Define interface in domain** (e.g., `CoconutRepository` ABC)
-2. **Implement in infrastructure** (e.g., `InMemoryCoconutRepository`)
-3. **Use cases depend on interface** (inject `CoconutRepository`, not implementation)
+1. **Define interface in domain** (e.g., `ColorCodebookRepository` ABC)
+2. **Implement in infrastructure** (e.g., `FileColorCodebookRepository`, `InMemoryColorCodebookRepository`)
+3. **Use cases depend on interface** (inject `ColorCodebookRepository`, not implementation)
 4. **DI container maps interface to implementation** (in interface layer)
 5. **Controllers inject use cases** (not repositories directly)
 

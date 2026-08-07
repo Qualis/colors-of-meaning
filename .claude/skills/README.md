@@ -17,10 +17,10 @@ This directory contains custom Claude Code skills tailored to this project's str
 - Creates use cases with dependency injection
 - Generates DTOs and controllers
 - Creates corresponding test files
-- References existing coconut feature as example
+- References the existing query-by-palette feature as a worked example
 
 **Supporting files:**
-- `references/existing-coconut-example.md` - Complete example from codebase
+- `references/existing-feature-example.md` - Complete vertical slice from the codebase
 - `references/layer-dependency-rules.md` - Import dependency rules
 
 ---
