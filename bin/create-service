@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
 
-tox -e build &&
-pushd dist &&
-whl=$(find . -name "*.whl" -exec ls -t1 {} + | head -1) &&
-popd &&
-version=$(python -m setuptools_scm | sed 's/+/./g') &&
+set -euo pipefail
 
-cp build/openapi.json build/"$version".json &&
+tox -e build
 
-packer build -color=false -var "whl=${whl}" -var "version=${version}" infrastructure/packer/service.pkr.hcl &&
+wheel=$(basename "$(find dist -name "*.whl" -exec ls -t1 {} + | head -1)")
 
-echo "VERSION=$version"
+if [ -z "$wheel" ]; then
+  echo "create-service: no wheel in dist; cannot determine the service version" >&2
+  exit 1
+fi
+
+version=$(cut -d - -f 2 <<<"$wheel" | tr + .)
+
+if [ -z "$version" ]; then
+  echo "create-service: could not read a version from ${wheel}" >&2
+  exit 1
+fi
+
+cp build/openapi.json "build/${version}.json"
+
+packer build -color=false -var "whl=${wheel}" -var "version=${version}" infrastructure/packer/service.pkr.hcl
+
+echo "VERSION=${version}"
