@@ -105,8 +105,6 @@ colors_of_meaning/
     service/
 
  domain/                            # Business logic
-    authentication/
-        authenticator.py
     health/
         health_status.py
     model/
@@ -152,8 +150,6 @@ colors_of_meaning/
         in_memory/
     visualization/
         matplotlib_figure_renderer.py
-    security/
-        basic_authentication.py
     system/
         health_checker.py
 
@@ -196,7 +192,6 @@ colors_of_meaning/
 - `model/` - Domain entities (e.g., `LabColor`, `ColorCodebook`, `ColoredDocument`, `EvaluationResult`)
 - `repository/` - Repository interfaces (abstract base classes)
 - `service/` - Domain service interfaces (e.g., `ColorMapper`, `DistanceCalculator`, `Classifier`, `Retriever`, `MetricsCalculator`, `FigureRenderer`, `CompressionBaseline`)
-- `authentication/` - Authentication domain logic
 - `health/` - Health status domain model
 
 ### Application Layer (`application/`)
@@ -223,7 +218,6 @@ colors_of_meaning/
 - Handle all external integrations (datasets, ML frameworks, APIs)
 - Provide concrete implementations of domain abstractions
 - Log through the standard-library logger with a `correlation-id` (there is no metrics or tracing backend — see Observability Requirements)
-- Manage security implementations (authentication, authorization)
 
 **Structure:**
 - `ml/` - PyTorch color mappers (unconstrained and structured), compression baselines (gzip, Product Quantization), and distance calculators (Wasserstein, Jensen-Shannon)
@@ -233,7 +227,6 @@ colors_of_meaning/
 - `visualization/` - Matplotlib figure renderer for codebook palettes, histograms, projections, confusion matrices
 - `persistence/` - Repository implementations (file-based codebook, JSON scaling manifest, in-memory)
 - `generation/` - Anthropic text generator adapter behind the `TextGenerator` port
-- `security/` - Authentication and authorization implementations
 - `system/` - Health checks and diagnostics
 
 ### Interface Layer (`interface/`)
@@ -431,10 +424,10 @@ class VisualizeCodebookUseCase:
 
 ## Security Requirements
 
-### Authentication & Authorization (implemented)
-- Basic authentication with Argon2id password hashing lives in `infrastructure/security/`
-- Authentication domain logic lives in `domain/authentication/`
-- Never commit credentials or secrets
+### Authentication & Authorization (not implemented)
+- The API is unauthenticated: every endpoint is open, and there is no `Authenticator` port or security adapter
+- Run it locally or on a trusted network; it is a research service, not a multi-tenant one
+- If authentication is added, attach the dependency to the routers in `create_app()` and cover it with a test that an uncredentialed request receives `401` — an adapter that is registered but never wired protects nothing
 
 ### Auditing
 - Log key domain events (with `correlation-id`) for an audit trail
@@ -442,8 +435,8 @@ class VisualizeCodebookUseCase:
 - Tamper-proof / append-only audit storage is not implemented; the audit trail is structured logging
 
 ### Secrets Management
-- Load secrets from the environment (developer-exported Argon2id credential hashes via a git-ignored `.env`)
-- Never hardcode secrets in code
+- Load secrets from the environment (today the only one is `ANTHROPIC_API_KEY`, used by book generation) or a git-ignored `.env`
+- Never commit credentials or secrets, and never hardcode them in code
 - A dedicated secret manager (e.g. Vault) is not used; the environment-based approach above is the current mechanism
 
 ## System Qualities
@@ -459,10 +452,11 @@ The qualities below describe the intended architecture. Items are marked **(impl
 - Structured logging with `correlation-id` (implemented).
 - Metrics collection and distributed tracing (aspirational — not implemented).
 
-### Security (implemented)
+### Security (partial)
 
-- Argon2id-hashed authentication and auditing of key domain events via structured logging.
+- Auditing of key domain events via structured logging (implemented).
 - Secrets loaded from the environment; a secret manager such as Vault is aspirational.
+- API authentication is **not** implemented — every endpoint is open.
 
 ### Availability (implemented)
 

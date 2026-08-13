@@ -444,17 +444,6 @@ calls pay only for the delta. Refusals and typed API errors surface as a domain-
 
 ## Utilities
 
-### `hash_password`
-
-Print an Argon2id hash for the API basic-auth credential. It has no tox environment — run the
-module directly, so the password never reaches a tracked file:
-
-```bash
-export APP_ADMIN_PASSWORD_HASH="$(python -m colors_of_meaning.interface.cli.hash_password)"
-```
-
-The command prompts without echoing and prints only the hash.
-
 ### `cli`
 
 The `colors-of-meaning-cli` entry point declared in `pyproject.toml`. It is a scaffold placeholder

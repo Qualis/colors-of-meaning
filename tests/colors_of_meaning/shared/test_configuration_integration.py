@@ -7,62 +7,44 @@ from pathlib import Path
 import pytest
 from assertpy import assert_that
 
-
-@pytest.mark.integration
-def test_should_use_environment_variable_configuration():
-    script_content = """
+PROBE_SCRIPT = """
 import os
 from colors_of_meaning.shared.configuration import get_application_setting_provider
 
 provider = get_application_setting_provider()
-print(f"admin={provider.get('admin')}")
-print(f"admin_password_hash={provider.get('admin_password_hash')}")
+print(f"experiment_config={provider.get('experiment_config')}")
+print(f"host={provider.get('host')}")
 """
 
+
+def _run_probe_with_environment(env: dict) -> subprocess.CompletedProcess:
     with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as temp_file:
-        temp_file.write(script_content)
+        temp_file.write(PROBE_SCRIPT)
         temp_file_path = temp_file.name
 
     try:
-        env = os.environ.copy()
-        env["APP_ADMIN"] = "env_admin"
-        env["APP_ADMIN_PASSWORD_HASH"] = "env_hash_value"
-
-        result = subprocess.run([sys.executable, temp_file_path], env=env, check=True, capture_output=True, text=True)
-
-        assert_that(result.stdout).contains("admin=env_admin")
-        assert_that(result.stdout).contains("admin_password_hash=env_hash_value")
-
+        return subprocess.run([sys.executable, temp_file_path], env=env, check=True, capture_output=True, text=True)
     finally:
         Path(temp_file_path).unlink(missing_ok=True)
+
+
+@pytest.mark.integration
+def test_should_use_environment_variable_configuration():
+    env = os.environ.copy()
+    env["APP_EXPERIMENT_CONFIG"] = "configs/from_environment.yaml"
+    env["APP_HOST"] = "127.0.0.1"
+
+    result = _run_probe_with_environment(env)
+
+    assert_that(result.stdout).contains("experiment_config=configs/from_environment.yaml")
 
 
 @pytest.mark.integration
 def test_should_use_properties_file_configuration():
-    script_content = """
-import os
-from colors_of_meaning.shared.configuration import get_application_setting_provider
+    env = os.environ.copy()
+    env.pop("APP_EXPERIMENT_CONFIG", None)
+    env.pop("APP_HOST", None)
 
-provider = get_application_setting_provider()
-print(f"admin={provider.get('admin')}")
-print(f"admin_password_hash={provider.get('admin_password_hash')}")
-"""
+    result = _run_probe_with_environment(env)
 
-    with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as temp_file:
-        temp_file.write(script_content)
-        temp_file_path = temp_file.name
-
-    try:
-        env = os.environ.copy()
-        if "APP_ADMIN" in env:
-            del env["APP_ADMIN"]
-        if "APP_ADMIN_PASSWORD_HASH" in env:
-            del env["APP_ADMIN_PASSWORD_HASH"]
-
-        result = subprocess.run([sys.executable, temp_file_path], env=env, check=True, capture_output=True, text=True)
-
-        assert_that(result.stdout).contains_ignoring_case("admin=")
-        assert_that(result.stdout).contains_ignoring_case("admin_password_hash=")
-
-    finally:
-        Path(temp_file_path).unlink(missing_ok=True)
+    assert_that(result.stdout).contains("experiment_config=configs/base.yaml")

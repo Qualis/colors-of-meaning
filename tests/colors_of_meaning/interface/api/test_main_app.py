@@ -2,7 +2,6 @@ import sys
 import os
 import json
 import importlib
-import logging
 
 import numpy as np
 import pytest
@@ -346,10 +345,3 @@ class TestContainerConstruction:
         second = get_global_container()
 
         assert_that(first).is_same_as(second)
-
-    def test_should_emit_fail_closed_warning_at_most_once_when_module_is_imported(self, caplog):
-        with caplog.at_level(logging.WARNING):
-            importlib.reload(main_module)
-
-        fail_closed = [record for record in caplog.records if "authentication unavailable" in record.getMessage()]
-        assert_that(len(fail_closed)).is_less_than_or_equal_to(1)

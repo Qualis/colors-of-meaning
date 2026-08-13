@@ -58,7 +58,7 @@ MANIFEST
 .conda*/
 .python-version
 
-# Local secrets (developer-exported credential hashes)
+# Local secrets (e.g. ANTHROPIC_API_KEY for book generation)
 .env
 
 # Artifacts (models, codebooks, encoded documents)

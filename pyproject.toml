@@ -17,7 +17,6 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
     "anthropic",
-    "argon2-cffi",
     "click",
     "datasets",
     "hnswlib",

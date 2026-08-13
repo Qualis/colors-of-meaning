@@ -28,8 +28,6 @@ def load_properties_file(file_path: str) -> Dict[str, str]:
 
 
 class ApplicationSettings(BaseSettings):
-    admin: str = "admin"
-    admin_password_hash: str = ""
     reload: bool = False
     host: str = ""
     experiment_config: str = DEFAULT_EXPERIMENT_CONFIG_PATH

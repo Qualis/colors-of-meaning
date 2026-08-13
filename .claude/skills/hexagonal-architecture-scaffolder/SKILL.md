@@ -24,7 +24,7 @@ The project follows hexagonal architecture with these layers:
 
 1. **Domain Layer** (`domain/`) - Pure business logic, no external dependencies
 2. **Application Layer** (`application/`) - Use case orchestration
-3. **Infrastructure Layer** (`infrastructure/`) - Technical implementations (persistence, security, etc.)
+3. **Infrastructure Layer** (`infrastructure/`) - Technical implementations (persistence, ML adapters, etc.)
 4. **Interface Layer** (`interface/`) - API controllers and DTOs
 5. **Shared Layer** (`shared/`) - Cross-cutting concerns
 
@@ -200,10 +200,9 @@ class FeatureNameApiResponseDataTransferObject(BaseModel):
 Create FastAPI controller with routes:
 
 ```python
-from typing import Annotated, Callable, Optional
+from typing import Annotated
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBasicCredentials
+from fastapi import APIRouter, HTTPException, status
 
 from colors_of_meaning.application.use_case.{feature_name}_use_case import (
     GetFeatureNameUseCase,
@@ -218,28 +217,24 @@ class FeatureNameController:
     def __init__(
         self,
         get_use_case: GetFeatureNameUseCase,
-        create_use_case: CreateFeatureNameUseCase,
-        authentication_dependency: Callable[[Optional[HTTPBasicCredentials]], None]
+        create_use_case: CreateFeatureNameUseCase
     ):
         self.router = APIRouter(prefix="/{feature_name}", tags=["{feature_name}"])
         self._get_use_case = get_use_case
         self._create_use_case = create_use_case
-        self._authentication_dependency = authentication_dependency
 
         self.router.add_api_route(
             "/{id}",
             self.get,
             methods=["GET"],
-            response_model=FeatureNameApiResponseDataTransferObject,
-            dependencies=[Depends(authentication_dependency)]
+            response_model=FeatureNameApiResponseDataTransferObject
         )
 
         self.router.add_api_route(
             "/",
             self.create,
             methods=["POST"],
-            status_code=status.HTTP_201_CREATED,
-            dependencies=[Depends(authentication_dependency)]
+            status_code=status.HTTP_201_CREATED
         )
 
     async def get(self, id: UUID):
@@ -277,7 +272,6 @@ class FeatureNameController:
 - Use FastAPI's APIRouter
 - Inject use cases via constructor
 - Handle errors and return appropriate HTTP status codes
-- Add authentication dependencies
 - Use DTOs for request/response transformation
 
 ### Step 7: Add __init__.py Files
@@ -338,8 +332,7 @@ from colors_of_meaning.interface.api.controller.{feature_name}_controller import
 # In main.py
 controller = FeatureNameController(
     get_use_case=container[GetFeatureNameUseCase],
-    create_use_case=container[CreateFeatureNameUseCase],
-    authentication_dependency=security_dependency.authentication_dependency()
+    create_use_case=container[CreateFeatureNameUseCase]
 )
 app.include_router(controller.router)
 ```

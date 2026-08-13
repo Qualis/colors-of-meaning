@@ -36,6 +36,19 @@ def _unimplemented_infrastructure_terms_in(document: str) -> list[str]:
     return [term for term in UNIMPLEMENTED_INFRASTRUCTURE_TERMS if term.lower() in lowered]
 
 
+RETIRED_AUTHENTICATION_TERMS = (
+    "APP_ADMIN",
+    "Argon2",
+    "basic-auth",
+    "hash_password",
+)
+
+
+def _retired_authentication_terms_in(document: str) -> list[str]:
+    lowered = document.lower()
+    return [term for term in RETIRED_AUTHENTICATION_TERMS if term.lower() in lowered]
+
+
 STATUS_EMOJI = ("✅", "◑", "➕", "⬜", "✓", "\U0001f4c2", "\U0001f4c4")
 NON_COMMAND_ENVIRONMENTS = frozenset({"format", "watch", "clean", "build", "publish"})
 ENVIRONMENT_HEADER_PREFIX = "[testenv:"
@@ -86,6 +99,17 @@ class TestDesignDocClaimsConsistency:
 class TestReadmeDoesNotOverclaimInfrastructure:
     def test_should_not_advertise_unimplemented_infrastructure_when_reading_readme(self) -> None:
         assert_that(_unimplemented_infrastructure_terms_in(_read_readme())).is_empty()
+
+
+class TestDocsDoNotClaimRetiredAuthentication:
+    def test_should_not_describe_api_authentication_when_reading_readme(self) -> None:
+        assert_that(_retired_authentication_terms_in(_read_readme())).is_empty()
+
+    def test_should_not_describe_api_authentication_when_reading_cli_doc(self) -> None:
+        assert_that(_retired_authentication_terms_in(_read_cli_doc())).is_empty()
+
+    def test_should_not_describe_api_authentication_when_reading_design_doc(self) -> None:
+        assert_that(_retired_authentication_terms_in(_read_design_doc())).is_empty()
 
 
 class TestReadmeStaysSuccinct:

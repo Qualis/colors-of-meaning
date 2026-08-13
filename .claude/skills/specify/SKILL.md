@@ -48,7 +48,7 @@ New or modified use cases and application services.
 List files that change or are created.
 
 ### Infrastructure Layer (`src/colors_of_meaning/infrastructure/`)
-New or modified adapters: ML color mappers, compression baselines, distance calculators (`ml/`); dataset adapters (`dataset/`); embedding adapter (`embedding/`); evaluation classifiers and metrics (`evaluation/`); visualization (`visualization/`); persistence, security, observability, health checks.
+New or modified adapters: ML color mappers, compression baselines, distance calculators (`ml/`); dataset adapters (`dataset/`); embedding adapter (`embedding/`); evaluation classifiers and metrics (`evaluation/`); visualization (`visualization/`); persistence, observability, health checks.
 List files that change or are created.
 
 ### Interface Layer (`src/colors_of_meaning/interface/`)

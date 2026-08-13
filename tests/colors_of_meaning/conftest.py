@@ -5,33 +5,6 @@ import pytest
 
 from colors_of_meaning.domain.model.evaluation_sample import EvaluationSample
 from colors_of_meaning.domain.repository.dataset_repository import DatasetRepository
-from colors_of_meaning.infrastructure.security.basic_authentication import (
-    BasicAuthenticator,
-    SecurityDependency,
-    hash_password,
-)
-
-
-@pytest.fixture
-def basic_authenticator() -> BasicAuthenticator:
-    authenticator = BasicAuthenticator()
-    authenticator.register_user("testuser", hash_password("testpass"))
-    return authenticator
-
-
-@pytest.fixture
-def security_dependency(basic_authenticator) -> SecurityDependency:
-    return SecurityDependency(basic_authenticator)
-
-
-@pytest.fixture
-def authentication_credentials():
-    return ("testuser", "testpass")
-
-
-@pytest.fixture
-def bad_authentication_credentials():
-    return ("baduser", "badpass")
 
 
 @pytest.fixture

@@ -39,42 +39,17 @@ No need for comments like "Get coconut from repository" or "Execute use case log
 
 ---
 
-### Example: Authentication Methods
-
-**Location:** `src/colors_of_meaning/infrastructure/security/basic_authentication.py:19-25`
-
-```python
-def verify_credentials(self, username: str, password: str) -> bool:
-    stored_password = self.user_credentials.get(username)
-
-    if stored_password is None:
-        return False
-
-    return stored_password == password
-```
-
-**Why This Works:**
-- `verify_credentials()` - Action-oriented name
-- `stored_password` - Clear what this variable represents
-- Return type `bool` - Makes success/failure obvious
-- No magic strings or numbers
-
----
-
 ### Example: Controller Route Registration
 
 **Location:** `src/colors_of_meaning/interface/api/controller/coconut_controller.py:29-47`
 
 ```python
 def _register_routes(self) -> None:
-    dependencies = [Depends(self.authentication_dependency)] if self.authentication_dependency else []
-
     self.router.add_api_route(
         "/{id}",
         self.get_coconut,
         methods=["GET"],
         response_model=CoconutApiResponseDataTransferObject,
-        dependencies=dependencies,
     )
 ```
 
@@ -86,31 +61,6 @@ def _register_routes(self) -> None:
 ---
 
 ## Pattern 2: Descriptive Variable Names
-
-### Example: Authentication Setup
-
-**Location:** `src/colors_of_meaning/infrastructure/security/basic_authentication.py:55-64`
-
-```python
-def get_basic_authenticator() -> BasicAuthenticator:
-    authenticator = BasicAuthenticator()
-
-    setting_provider = get_application_setting_provider()
-    admin_username = setting_provider.get("admin")
-    admin_password = setting_provider.get("password")
-
-    authenticator.register_user(admin_username, admin_password)
-
-    return authenticator
-```
-
-**Why This Works:**
-- `setting_provider` - Describes what the object provides
-- `admin_username` / `admin_password` - Context included in name
-- Each variable has a clear, specific purpose
-- No abbreviations or cryptic names
-
----
 
 ### Example: Response Creation
 
@@ -157,26 +107,6 @@ def read(self, id: uuid.UUID) -> Coconut:
 
 ---
 
-### Example: Authentication Errors
-
-**Location:** `src/colors_of_meaning/infrastructure/security/basic_authentication.py:35-40`
-
-```python
-if not credentials:
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Authentication required",
-        headers={"WWW-Authenticate": "Basic"},
-    )
-```
-
-**Why This Works:**
-- `detail="Authentication required"` - User-friendly message
-- Named status code - `status.HTTP_401_UNAUTHORIZED`
-- Standard HTTP headers - Self-documenting protocol
-
----
-
 ## Pattern 4: Small, Single-Purpose Functions
 
 ### Example: CQRS Separation
@@ -217,17 +147,13 @@ class CreateCoconutUseCase:
 **Location:** `src/colors_of_meaning/interface/api/controller/coconut_controller.py:84-94`
 
 ```python
-def create_coconut_controller(
-    container: Container,
-    authentication_dependency: Optional[Callable[[Optional[HTTPBasicCredentials]], None]] = None
-) -> CoconutController:
+def create_coconut_controller(container: Container) -> CoconutController:
     get_coconut_use_case = container[GetCoconutUseCase]
     create_coconut_use_case = container[CreateCoconutUseCase]
 
     return CoconutController(
         get_coconut_use_case=get_coconut_use_case,
         create_coconut_use_case=create_coconut_use_case,
-        authentication_dependency=authentication_dependency,
     )
 ```
 
@@ -240,37 +166,6 @@ def create_coconut_controller(
 ---
 
 ## Pattern 5: Boolean Checks with Clear Intent
-
-### Example: Credential Verification
-
-**Location:** `src/colors_of_meaning/infrastructure/security/basic_authentication.py:32-47`
-
-```python
-def require_authentication(
-    self, credentials: Optional[HTTPBasicCredentials] = Depends(basic_authentication)
-) -> None:
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-
-    if not self.authenticator.verify_credentials(credentials.username, credentials.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-```
-
-**Why This Works:**
-- `if not credentials:` - Clear existence check
-- `verify_credentials()` - Boolean method with clear name
-- Guard clauses make validation flow obvious
-- Different error messages for different failures
-
----
 
 ### Example: Null Checking
 
@@ -368,75 +263,34 @@ async def get_coconut(self, id: UUID4) -> CoconutApiResponseDataTransferObject:
 
 ---
 
-### Scenario 3: Conditional Logic with Comments → Boolean Variables
+### Scenario 3: Conditional Logic with Comments → Expressive Names
+
+**Location:** `src/colors_of_meaning/interface/api/main.py`
 
 **BEFORE (With Comments - FORBIDDEN):**
 ```python
-def _register_routes(self):
-    # Create dependencies list with auth if provided
-    if self.authentication_dependency:
-        deps = [Depends(self.authentication_dependency)]
-    else:
-        deps = []
+def build_router(container, c):
+    # If there is no corpus, serve the degraded router instead
+    if c is None:
+        return create_unavailable_query_controller(MSG)
 
-    # Register GET route
-    self.router.add_api_route("/{id}", self.get_coconut, methods=["GET"], dependencies=deps)
+    # Otherwise wire the real one
+    return create_query_controller(container[QueryByPaletteUseCase], c)
 ```
 
 **AFTER (Self-Documenting - ACTUAL CODE):**
 ```python
-def _register_routes(self) -> None:
-    dependencies = [Depends(self.authentication_dependency)] if self.authentication_dependency else []
-
-    self.router.add_api_route(
-        "/{id}",
-        self.get_coconut,
-        methods=["GET"],
-        response_model=CoconutApiResponseDataTransferObject,
-        dependencies=dependencies,
-    )
+def _build_query_router(container: Container, corpus: Optional[List[ColoredDocument]]) -> APIRouter:
+    if corpus is None:
+        return create_unavailable_query_controller(CORPUS_UNAVAILABLE_DETAIL)
+    return create_query_controller(container[QueryByPaletteUseCase], corpus)
 ```
 
 **Improvements:**
-- Variable named `dependencies` (full word) vs `deps` (abbreviation)
-- Ternary expression is clear enough without comment
-- Named parameters make route configuration self-documenting
-- Type annotation `-> None` documents no return value
-
----
-
-### Scenario 4: Authentication Logic with Comments → Expressive Names
-
-**BEFORE (With Comments - FORBIDDEN):**
-```python
-def check_auth(self, creds):
-    # Get the stored password for this user
-    pwd = self.user_credentials.get(creds.username)
-
-    # Check if user exists
-    if pwd is None:
-        return False
-
-    # Compare passwords
-    return pwd == creds.password
-```
-
-**AFTER (Self-Documenting - ACTUAL CODE):**
-```python
-def verify_credentials(self, username: str, password: str) -> bool:
-    stored_password = self.user_credentials.get(username)
-
-    if stored_password is None:
-        return False
-
-    return stored_password == password
-```
-
-**Improvements:**
-- `verify_credentials` vs `check_auth` (more explicit)
-- `stored_password` vs `pwd` (complete word)
-- Direct parameters (`username`, `password`) instead of credential object
-- Return type `-> bool` documents success/failure
+- `corpus` (full word) vs `c` (abbreviation)
+- `CORPUS_UNAVAILABLE_DETAIL` names the message instead of a cryptic `MSG`
+- The guard clause reads as its own explanation, so the comment adds nothing
+- Type annotations document both the optional input and the router return
 
 ---
 
@@ -528,8 +382,8 @@ elif "already exists" in str(e).lower():
 | Temptation | Refactoring Solution | Example from Codebase |
 |------------|---------------------|----------------------|
 | "This creates..." | Use `create_X()` or `build_X()` in name | `create_coconut_controller()` |
-| "This validates..." | Use `verify_X()` or `validate_X()` | `verify_credentials()` |
-| "This checks if..." | Extract to `is_X()` or `has_Y()` method | `if not credentials:` |
+| "This validates..." | Use `verify_X()` or `validate_X()` | `validate_lab_ranges()` |
+| "This checks if..." | Extract to `is_X()` or `has_Y()` method | `if corpus is None:` |
 | "Get X from Y" | Use `get_X_from_Y()` or property | `get_coconut()` |
 | "Register/setup..." | Use `register_X()` or `_setup_Y()` | `_register_routes()` |
 | "Store for later" | Use descriptive name with context | `self._query_repository` |
@@ -565,9 +419,10 @@ def process(data):
 
 ### ✅ Use Specific, Context-Rich Names
 ```python
-def verify_credentials(self, username: str, password: str) -> bool:
-    stored_password = self.user_credentials.get(username)
-    return stored_password == password
+def _select_distance_calculator(metric: str, codebook: ColorCodebook) -> DistanceCalculator:
+    if metric != "wasserstein":
+        return JensenShannonDistanceCalculator(smoothing_epsilon=SMOOTHING_EPSILON)
+    return WassersteinDistanceCalculator(codebook=codebook, sinkhorn_reg=SINKHORN_REGULARISATION)
 ```
 
 ---
@@ -585,8 +440,8 @@ time.sleep(5)  # Why 5?
 if response.status_code == status.HTTP_404_NOT_FOUND:
     return None
 
-AUTHENTICATION_RETRY_DELAY_SECONDS = 5
-time.sleep(AUTHENTICATION_RETRY_DELAY_SECONDS)
+FALLBACK_BINS_PER_DIMENSION = 16
+ColorCodebook.create_uniform_grid(FALLBACK_BINS_PER_DIMENSION)
 ```
 
 ---
@@ -608,6 +463,6 @@ All examples taken from:
 - `src/colors_of_meaning/application/use_case/coconut_use_case.py`
 - `src/colors_of_meaning/interface/api/controller/coconut_controller.py`
 - `src/colors_of_meaning/infrastructure/persistence/in_memory/in_memory_coconut_query_repository.py`
-- `src/colors_of_meaning/infrastructure/security/basic_authentication.py`
+- `src/colors_of_meaning/interface/api/main.py`
 
 See `.claude/CLAUDE.md` for full project rules and architectural guidelines.

@@ -246,8 +246,7 @@ class TestCoconutController:
     @pytest.fixture
     def controller(self, mock_use_case):
         return CoconutController(
-            get_use_case=mock_use_case,
-            authentication_dependency=lambda x: None
+            get_use_case=mock_use_case
         )
 
     @pytest.fixture
@@ -286,7 +285,6 @@ class TestCoconutController:
 - **External dependencies** (databases, APIs, file systems)
 - **Repository implementations** in use case tests
 - **Use cases** in controller tests
-- **Authentication dependencies**
 
 ### What NOT to Mock
 

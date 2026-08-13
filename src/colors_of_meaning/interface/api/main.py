@@ -24,11 +24,6 @@ from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import 
 from colors_of_meaning.infrastructure.persistence.file_color_codebook_repository import (
     FileColorCodebookRepository,
 )
-from colors_of_meaning.infrastructure.security.basic_authentication import (
-    BasicAuthenticator,
-    SecurityDependency,
-    get_basic_authenticator,
-)
 from colors_of_meaning.infrastructure.system.health_factory import create_health_checker
 from colors_of_meaning.interface.api.controller.health_controller import create_health_controller
 from colors_of_meaning.interface.api.controller.query_controller import (
@@ -138,11 +133,6 @@ def get_container(runtime_context: Optional[ExperimentRuntimeContext] = None) ->
     container[DistanceCalculator] = lambda: _select_distance_calculator(DISTANCE_METRIC, codebook)  # type: ignore
     container[CompareDocumentsUseCase] = CompareDocumentsUseCase
     container[QueryByPaletteUseCase] = QueryByPaletteUseCase
-
-    authenticator = get_basic_authenticator()
-    security_dependency = SecurityDependency(authenticator)
-    container[BasicAuthenticator] = lambda: authenticator
-    container[SecurityDependency] = lambda: security_dependency
 
     health_checker = create_health_checker()
     container[HealthChecker] = lambda: health_checker  # type: ignore

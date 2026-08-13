@@ -65,31 +65,19 @@ def test_should_not_use_domain_model_in_data_transfer_object():
     )
 
 
-def test_should_follow_security_module_architecture():
-    (
-        archrule(
-            "Security Module",
-            comment="Security components should follow architectural boundaries",
-        )
-        .match("colors_of_meaning.infrastructure.security.*")
-        .should_import("colors_of_meaning.domain.authentication.*")
-        .check("colors_of_meaning")
-    )
-
-
 def _does_not_import_argon2(module, direct_imports, all_imports):
     return not any(
         imported == "argon2" or imported.startswith("argon2.") for imported in all_imports.get(module, set())
     )
 
 
-def test_should_confine_password_hashing_to_security_module():
+def test_should_not_ship_password_hashing_in_any_layer():
     (
         archrule(
-            "Password Hashing Confinement",
-            comment="Argon2 password hashing must stay out of domain and application layers",
+            "No Password Hashing",
+            comment="The package ships no authentication, so no module may import Argon2",
         )
-        .match("colors_of_meaning.domain.*", "colors_of_meaning.application.*")
+        .match("colors_of_meaning.*")
         .should(_does_not_import_argon2, "does_not_import_argon2")
         .check("colors_of_meaning")
     )

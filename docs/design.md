@@ -66,7 +66,6 @@ colors_of_meaning/
     repository/       ColorCodebookRepository, DatasetRepository,
                       AuthorshipScalingRepository
     service/          the ports listed above, plus CellGeometry and DataPayload
-    authentication/   Authenticator
     health/           HealthChecker, HealthStatus
   application/
     use_case/         train, encode, compare, compress, compression comparison,
@@ -85,7 +84,6 @@ colors_of_meaning/
     generation/       Anthropic text generator
     visualization/    matplotlib figures, Pillow document images, Pillow data codec
     persistence/      file codebook repository, JSON scaling manifest, in-memory
-    security/         Argon2id basic authentication
     system/           health checks
   interface/
     api/              FastAPI app, health and palette-query controllers, Pydantic DTOs

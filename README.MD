@@ -375,18 +375,10 @@ The quality gates are ruff check, ruff format, bandit, semgrep, radon, xenon, my
 pip-audit, all passing, with 100% test coverage enforced. Use `tox` rather than `pytest` directly
 — `pytest` alone skips eight of those gates.
 
-### API authentication
+### API access
 
-The basic-auth path never stores or ships a plaintext password. The admin credential is supplied
-at runtime as an Argon2id hash in `APP_ADMIN_PASSWORD_HASH`; no usable credential is committed.
-
-```bash
-export APP_ADMIN_PASSWORD_HASH="$(python -m colors_of_meaning.interface.cli.hash_password)"
-```
-
-The command prompts for a password without echoing it and prints only the hash. With the variable
-exported, authenticate as `admin` (override with `APP_ADMIN`) using that password. If the variable
-is unset the authenticator fails closed: every login is refused and a warning is logged.
+The API is unauthenticated. Every endpoint is open, so run it locally or on a trusted network.
+It is a research service for exploring the color pipeline, not a multi-tenant one.
 
 ## Architecture
 
@@ -397,7 +389,7 @@ tests rather than convention:
 - **Application** — use cases that orchestrate domain services, with dependencies injected.
 - **Infrastructure** — adapters implementing the domain ports: ML mappers and distance
   calculators, dataset adapters, classifiers and retrievers, visualization, persistence,
-  security, health.
+  health.
 - **Interface** — FastAPI controllers with Pydantic DTOs, and `tyro` CLIs.
 - **Shared** — configuration and Lab color utilities.
 

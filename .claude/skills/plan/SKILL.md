@@ -52,7 +52,7 @@ Identify which existing files to modify vs. new files to create.
 - ML adapters: color mappers, compression baselines, distance calculators (`ml/`)
 - Dataset adapters, embedding adapter, evaluation classifiers, visualization (`dataset/`, `embedding/`, `evaluation/`, `visualization/`)
 - Repository implementations (`persistence/`)
-- Security adapters (`security/`), health checks (`system/`)
+- Health checks (`system/`)
 - Observability: structured logging with correlation-id, metrics, tracing (`observability/`)
 - Implements domain interfaces
 

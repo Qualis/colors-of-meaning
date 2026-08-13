@@ -59,43 +59,41 @@ class TestCoconutController:
         return mock
 
     @pytest.fixture
-    def controller(self, mock_get_coconut_use_case, authentication_dependency) -> CoconutController:
+    def controller(self, mock_get_coconut_use_case) -> CoconutController:
         return CoconutController(
             get_coconut_use_case=mock_get_coconut_use_case,
-            authentication_dependency=authentication_dependency,
         )
 
     @pytest.fixture
     def client(self, app) -> TestClient:
         return TestClient(app)
 
-    def test_should_be_200(self, client, mock_get_coconut_use_case, sample_coconut_id, authentication_headers):
+    def test_should_be_200(self, client, mock_get_coconut_use_case, sample_coconut_id):
         coconut = Coconut(id=sample_coconut_id)
         mock_get_coconut_use_case.execute.return_value = coconut
 
-        response = client.get(f"/coconut/{sample_coconut_id}", headers=authentication_headers)
+        response = client.get(f"/coconut/{sample_coconut_id}")
 
         assert_that(response.status_code).is_equal_to(200)
 
-    def test_should_get_coconut(self, client, mock_get_coconut_use_case, sample_coconut_id, authentication_headers):
+    def test_should_get_coconut(self, client, mock_get_coconut_use_case, sample_coconut_id):
         coconut = Coconut(id=sample_coconut_id)
         mock_get_coconut_use_case.execute.return_value = coconut
 
-        response = client.get(f"/coconut/{sample_coconut_id}", headers=authentication_headers)
+        response = client.get(f"/coconut/{sample_coconut_id}")
 
         assert_that(response.json()["id"]).is_equal_to(str(sample_coconut_id))
 
-    def test_should_be_404(self, client, mock_get_coconut_use_case, sample_coconut_id, authentication_headers):
+    def test_should_be_404(self, client, mock_get_coconut_use_case, sample_coconut_id):
         mock_get_coconut_use_case.execute.side_effect = Exception("Coconut not found")
 
-        response = client.get(f"/coconut/{sample_coconut_id}", headers=authentication_headers)
+        response = client.get(f"/coconut/{sample_coconut_id}")
 
         assert_that(response.status_code).is_equal_to(404)
 ```
 
 **Observations:**
 - HTTP status code checks in separate tests from body checks
-- Authentication fixtures for security testing
 - FastAPI TestClient for integration testing
 - Mock use cases, not repositories (layer separation)
 - Each aspect tested separately: status code, response body, error handling
