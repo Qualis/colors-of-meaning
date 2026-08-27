@@ -8,6 +8,17 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    # torch is deliberately held at 2.12.1 by `constraint-dependencies` in
+    # pyproject.toml so the committed evaluation results stay reproducible, and
+    # torch 2.12.1 declares `Requires-Dist: setuptools<82`. Dependabot cannot see
+    # either constraint: it rewrites the bare requirement to a pinned
+    # `torch==<latest>` / `setuptools==<latest>`, which contradicts the pin and
+    # fails the whole update job with `dependency_file_not_resolvable`. Both are
+    # unpinned again as part of the deliberate torch bump — see
+    # docs/security/audit-suppressions.md.
+    ignore:
+      - dependency-name: torch
+      - dependency-name: setuptools
     groups:
       python-dependencies:
         patterns:

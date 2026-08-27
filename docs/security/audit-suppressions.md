@@ -21,6 +21,25 @@ see the coverage gaps below.
 | PYSEC-2026-3447 | setuptools | 81.0.0 | 83.0.0 | Held at 81.0.0 by `uv.lock` and not independently upgradable: `torch` 2.12.1 declares `Requires-Dist: setuptools<82`, so the pinned torch caps setuptools below the fix version. Clearing this advisory therefore depends on the torch bump below, not on a separate setuptools bump. This is the runtime/`testing`-extra copy — the one `pip-audit` actually sees. | 2026-10-29 |
 | PYSEC-2025-194 | torch | 2.12.1 | 2.13.0 | `torch` is held at 2.12.1 by `constraint-dependencies` in `pyproject.toml` for reproducibility of the committed evaluation results. Bumping to ≥2.13.0 shifts the whole ML stack and requires re-validating the pipeline and regenerating reported numbers; scheduled as a deliberate, separately-verified change. Load-bearing only on macOS — see the coverage gap below. | 2026-10-29 |
 
+## Dependabot ignore list
+
+`.github/dependabot.yml` ignores two packages. This is not a security suppression — the gate
+still audits both and still fails on a new advisory against them — it exists because Dependabot
+cannot see the pin and its update job hard-fails when it tries.
+
+Dependabot rewrites a bare requirement to a pinned `<name>==<latest>` before re-resolving. For
+these two that contradicts a constraint it has no visibility into, so `uv lock` reports
+`No solution found` and the *entire* update job exits non-zero — taking the other dependency
+updates in the group down with it.
+
+| Package | Why Dependabot cannot update it | Un-ignore when |
+|---------|--------------------------------|----------------|
+| torch | `[tool.uv] constraint-dependencies = ["torch==2.12.1"]` in `pyproject.toml` holds torch at the version the committed evaluation results were produced with. A rewritten `torch==<latest>` contradicts it: `Because your project depends on torch==2.13.0 and torch==2.12.1 ... unsatisfiable`. | The deliberate torch bump lands and the constraint is removed. |
+| setuptools | torch 2.12.1 declares `Requires-Dist: setuptools<82`, so the pinned torch caps setuptools. A rewritten `setuptools==<latest>` contradicts it: `Because torch>=2.12.1,<=2.12.1+cpu depends on setuptools<82 and colors-of-meaning[testing] depends on setuptools==84.0.0 ... incompatible`. | The torch cap lifts. Clearing PYSEC-2026-3447 depends on that bump, not on a separate setuptools bump. |
+
+Both entries come back out together with the torch pin. Until then they are the reason
+Dependabot's weekly run is green rather than red-with-a-created-PR.
+
 ## Coverage gaps
 
 Recorded so the gate is not read as claiming more coverage than it has.
