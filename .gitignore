@@ -2,6 +2,7 @@
 .claude/settings.local.json
 .claude/prompts/
 .vagrant
+.ansible
 
 # Temporary and binary files
 *~

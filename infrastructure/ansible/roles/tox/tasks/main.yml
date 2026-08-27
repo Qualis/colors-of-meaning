@@ -2,10 +2,10 @@
   ansible.builtin.command:
     cmd: pipx install uv
     creates: ~/.local/bin/uv
-  register: uv_install
+  register: tox_uv_install
   retries: 3
   delay: 5
-  until: uv_install is not failed
+  until: tox_uv_install is not failed
 
 - name: Symlink uv
   ansible.builtin.file:

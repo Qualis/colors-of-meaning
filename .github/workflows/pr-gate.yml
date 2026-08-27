@@ -40,13 +40,13 @@ jobs:
         name: Install gate tools
         run: |
           uv tool install --python 3.11 --with "tox-uv>=1.36.0" "tox>=4.52.1,<5"
-          uv tool install ansible-lint
+          uv tool install --with "ansible==12.3.0" "ansible-lint==26.8.0"
           uv tool install semgrep==1.164.0
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - id: ansible-lint
         name: Ansible Lint
-        run: ansible-lint -p infrastructure/ansible/playbook-*.yml
+        run: ansible-lint --format=pep8 infrastructure/ansible/playbook-*.yml
 
       - id: shellcheck
         name: ShellCheck
