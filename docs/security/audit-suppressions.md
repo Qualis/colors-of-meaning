@@ -12,7 +12,7 @@ dependency groups that `tox -e build` and `tox -e publish` install with `--only-
 `setuptools_scm`), which are resolved fresh into an isolated environment on every wheel build —
 see the coverage gaps below.
 
-**Last reviewed:** 2026-07-29
+**Last reviewed:** 2026-08-27
 
 ## Active suppressions
 
@@ -32,6 +32,16 @@ Recorded so the gate is not read as claiming more coverage than it has.
 
 The project itself (`colors-of-meaning`) is skipped for the same reason and is expected — it
 is not published to PyPI.
+
+## Fixed rather than suppressed
+
+Advisories the gate surfaced against the locked closure and that were cleared by moving the
+lock forward, recorded so the default is visibly "upgrade", not "suppress".
+
+| ID | Package | Was | Now | Date |
+|----|---------|-----|-----|------|
+| PYSEC-2026-3716 | datasets | 5.0.0 | 5.0.1 | 2026-08-27 |
+| PYSEC-2026-3721 | pip (transitive, via `pip-api` ← `pip-audit`) | 26.1.2 | 26.2.1 | 2026-08-27 |
 
 ## Pruned suppressions
 
