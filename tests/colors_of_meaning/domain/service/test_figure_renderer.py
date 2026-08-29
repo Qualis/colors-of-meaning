@@ -14,6 +14,7 @@ RENDER_METHOD_NAMES: Tuple[str, ...] = (
     "render_narrative_arc",
     "render_a4_gallery",
     "render_image_comparison",
+    "render_objective_comparison",
 )
 
 
@@ -77,6 +78,9 @@ class TestFigureRenderer:
                 pass
 
             def render_image_comparison(self, panels, title, output_path):  # type: ignore
+                pass
+
+            def render_objective_comparison(self, comparison, output_path):  # type: ignore
                 pass
 
         renderer = ConcreteFigureRenderer()

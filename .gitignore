@@ -77,6 +77,7 @@ reports/*
 !reports/documents_rate_distortion.md
 !reports/story_compass.md
 !reports/grounding_audit.md
+!reports/structure_objective.md
 !reports/figures
 reports/figures/*
 !reports/figures/rate_distortion.png
@@ -87,6 +88,7 @@ reports/figures/*
 !reports/figures/lossless_a_christmas_carol.png
 !reports/figures/documents_two_ways.png
 !reports/figures/story_compass.png
+!reports/figures/structure_objective.png
 !reports/figures/a4/
 !reports/data/
 !reports/data/authorship_scaling.json

@@ -1,9 +1,10 @@
 import logging
 import math
+import statistics
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Sequence, Tuple
 
 import numpy.typing as npt
 import tyro
@@ -60,6 +61,9 @@ from colors_of_meaning.infrastructure.ml.jensen_shannon_distance_calculator impo
 from colors_of_meaning.infrastructure.ml.pq_compression_baseline import (
     PQCompressionBaseline,
 )
+from colors_of_meaning.infrastructure.ml.sliced_wasserstein_distance_calculator import (
+    SlicedWassersteinDistanceCalculator,
+)
 from colors_of_meaning.infrastructure.ml.wasserstein_distance_calculator import (
     WassersteinDistanceCalculator,
 )
@@ -75,7 +79,35 @@ GZIP = "gzip"
 PQ = "pq"
 DEFAULT_BUDGETS = [2, 4, 8, 16]
 DEFAULT_METHODS = [COLOR_VQ, GZIP, PQ]
+RateDistortionDistance = Literal["wasserstein", "sliced", "jensen_shannon"]
+DEFAULT_DISTANCES: List[RateDistortionDistance] = ["wasserstein"]
+NO_INVERSION_SUMMARY = (
+    "No distance inverts: accuracy is highest at the widest budget, so the earlier inversion was a metric artifact."
+)
+UNIVERSAL_INVERSION_SUMMARY = (
+    "Every distance inverts, so the drop past the peak budget is a property of the bit budget, not of the metric."
+)
+SINGLE_DISTANCE_SUMMARY = (
+    "Only one distance was measured, so this run cannot separate a property of the bit budget from a property of "
+    "the metric; re-run with a second --distance to attribute the shape."
+)
 PQ_BITS_PER_SUBQUANTIZER = 3
+
+
+@dataclass(frozen=True)
+class SweepRun:
+    distance: str
+    seed: int
+    frontier: RateDistortionFrontier
+
+
+@dataclass(frozen=True)
+class RateAccuracyPoint:
+    distance: str
+    bits_per_token: float
+    mean_accuracy: float
+    stdev_accuracy: float
+    seeds: int
 
 
 @dataclass
@@ -93,7 +125,8 @@ class RateDistortionArgs:
     methods: List[str] = field(default_factory=lambda: list(DEFAULT_METHODS))
     model_path: str = "artifacts/models/projector.pth"
     mapper_type: str = "unconstrained"
-    distance: str = "wasserstein"
+    distance: List[RateDistortionDistance] = field(default_factory=lambda: list(DEFAULT_DISTANCES))
+    seeds: Optional[List[int]] = None
     k_neighbors: int = 5
     with_accuracy: bool = False
     max_samples: Optional[int] = 400
@@ -128,6 +161,8 @@ def _create_distance_calculator(
 ) -> DistanceCalculator:
     if distance == "wasserstein":
         return WassersteinDistanceCalculator(codebook=codebook, sinkhorn_reg=config.distance.sinkhorn_reg)
+    if distance == "sliced":
+        return SlicedWassersteinDistanceCalculator(codebook=codebook, seed=config.training.seed)
     if distance == "jensen_shannon":
         return JensenShannonDistanceCalculator(smoothing_epsilon=config.distance.smoothing_epsilon)
     raise ValueError(f"Unknown distance: {distance}")
@@ -137,9 +172,7 @@ def _pq_subquantizers(budget: int) -> int:
     return max(1, int(round(math.log2(budget))))
 
 
-def _build_baseline_factory(
-    color_mapper: ColorMapper, config: SynestheticConfig, primary_budget: int
-) -> BaselineFactory:
+def _build_baseline_factory(color_mapper: ColorMapper, seed: int, primary_budget: int) -> BaselineFactory:
     def build(method: str, budget: int) -> Optional[CompressionBaseline]:
         if method == COLOR_VQ:
             codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=budget)
@@ -148,7 +181,7 @@ def _build_baseline_factory(
             return PQCompressionBaseline(
                 num_subspaces=_pq_subquantizers(budget),
                 num_centroids=2**PQ_BITS_PER_SUBQUANTIZER,
-                seed=config.training.seed,
+                seed=seed,
             )
         if method == GZIP:
             return GzipCompressionBaseline() if budget == primary_budget else None
@@ -163,13 +196,14 @@ def _build_evaluate_factory(
     dataset_repository: DatasetRepository,
     embedding_adapter: SentenceEmbeddingAdapter,
     color_mapper: ColorMapper,
+    distance: str,
 ) -> EvaluateUseCaseFactory:
     def build(method: str, budget: int) -> Optional[EvaluateUseCase]:
         if method != COLOR_VQ:
             return None
         codebook = ColorCodebook.create_uniform_grid(bins_per_dimension=budget)
         encode_use_case = EncodeDocumentUseCase(QuantizedColorMapper(color_mapper, codebook))
-        distance_calculator = _create_distance_calculator(args.distance, codebook, config)
+        distance_calculator = _create_distance_calculator(distance, codebook, config)
         classifier = ColorHistogramClassifier(
             embedding_adapter, encode_use_case, distance_calculator, k=args.k_neighbors
         )
@@ -191,27 +225,219 @@ def _encode_evaluation_embeddings(
     return embedding_adapter.encode_batch(texts, batch_size=config.training.batch_size)
 
 
-def _run_sweep(
-    args: RateDistortionArgs,
-    config: SynestheticConfig,
-    dataset_repository: DatasetRepository,
-    embedding_adapter: SentenceEmbeddingAdapter,
-    color_mapper: ColorMapper,
-    embeddings: npt.NDArray,
-    correlation_id: str,
-) -> RateDistortionFrontier:
-    baseline_factory = _build_baseline_factory(color_mapper, config, args.budgets[0])
-    evaluate_factory = _build_evaluate_factory(args, config, dataset_repository, embedding_adapter, color_mapper)
+@dataclass(frozen=True, eq=False)
+class SweepInputs:
+    args: RateDistortionArgs
+    config: SynestheticConfig
+    dataset_repository: DatasetRepository
+    embedding_adapter: SentenceEmbeddingAdapter
+    color_mapper: ColorMapper
+    embeddings: npt.NDArray
+    correlation_id: str
+
+
+def _resolved_seeds(args: RateDistortionArgs, config: SynestheticConfig) -> List[int]:
+    return list(args.seeds) if args.seeds else [config.training.seed]
+
+
+def _reject_repeats(name: str, values: Sequence[object]) -> None:
+    labels = [str(value) for value in values]
+    if len(labels) != len(set(labels)):
+        raise ValueError(f"{name} must not repeat a value, got {labels}")
+
+
+def _reject_unknown_methods(methods: Sequence[str]) -> None:
+    unknown = sorted(set(methods) - {COLOR_VQ, GZIP, PQ})
+    if unknown:
+        raise ValueError(f"Unknown method: {' '.join(unknown)}. Supported: {sorted([COLOR_VQ, GZIP, PQ])}")
+
+
+def _reject_unusable_budgets(budgets: Sequence[int]) -> None:
+    unusable = [budget for budget in budgets if budget < 2]
+    if unusable:
+        raise ValueError(f"budgets must be at least 2 bins per dimension, got {unusable}")
+
+
+def _reject_empty_axes(args: RateDistortionArgs) -> None:
+    axes = (
+        ("distance", args.distance),
+        ("budgets", args.budgets),
+        ("methods", args.methods),
+        ("seeds", args.seeds if args.seeds is not None else DEFAULT_DISTANCES),
+    )
+    for name, values in axes:
+        if not values:
+            raise ValueError(f"{name} must name at least one value")
+
+
+def _reject_empty_sweep_axes(args: RateDistortionArgs) -> None:
+    _reject_empty_axes(args)
+    _reject_repeats("distance", args.distance)
+    _reject_repeats("seeds", args.seeds or [])
+    _reject_unknown_methods(args.methods)
+    _reject_unusable_budgets(args.budgets)
+
+
+def _sweep_grid(args: RateDistortionArgs, config: SynestheticConfig) -> List[Tuple[str, int]]:
+    seeds = _resolved_seeds(args, config)
+    if not args.with_accuracy:
+        return [(args.distance[0], seeds[0])]
+    return [(distance, seed) for distance in args.distance for seed in seeds]
+
+
+def _run_sweep(inputs: SweepInputs, distance: str, seed: int, methods: Sequence[str]) -> RateDistortionFrontier:
+    args = inputs.args
+    baseline_factory = _build_baseline_factory(inputs.color_mapper, seed, args.budgets[0])
+    evaluate_factory = _build_evaluate_factory(
+        args, inputs.config, inputs.dataset_repository, inputs.embedding_adapter, inputs.color_mapper, distance
+    )
     use_case = RateDistortionSweepUseCase(baseline_factory, evaluate_use_case_factory=evaluate_factory)
     return use_case.execute(
-        embeddings,
+        inputs.embeddings,
         budgets=args.budgets,
-        methods=args.methods,
+        methods=list(methods),
         with_accuracy=args.with_accuracy,
         max_samples=args.max_samples,
-        seed=config.training.seed,
-        correlation_id=correlation_id,
+        seed=seed,
+        correlation_id=inputs.correlation_id,
     )
+
+
+def _run_all_sweeps(inputs: SweepInputs) -> List[SweepRun]:
+    grid = _sweep_grid(inputs.args, inputs.config)
+    return [
+        SweepRun(distance, seed, _run_sweep(inputs, distance, seed, _run_methods(inputs.args, index)))
+        for index, (distance, seed) in enumerate(grid)
+    ]
+
+
+def _run_methods(args: RateDistortionArgs, index: int) -> Sequence[str]:
+    return args.methods if index == 0 else [COLOR_VQ]
+
+
+def _accuracy_by_budget(run: SweepRun) -> Dict[float, float]:
+    return {
+        point.bits_per_token: point.accuracy
+        for point in run.frontier.points
+        if point.method == COLOR_VQ and point.accuracy is not None
+    }
+
+
+def _rate_accuracy_points(runs: Sequence[SweepRun], distance: str) -> List[RateAccuracyPoint]:
+    measurements: Dict[float, List[float]] = {}
+    for run in runs:
+        if run.distance != distance:
+            continue
+        for bits, accuracy in _accuracy_by_budget(run).items():
+            measurements.setdefault(bits, []).append(accuracy)
+    return [_rate_accuracy_point(distance, bits, values) for bits, values in sorted(measurements.items())]
+
+
+def _rate_accuracy_point(distance: str, bits: float, values: List[float]) -> RateAccuracyPoint:
+    return RateAccuracyPoint(
+        distance=distance,
+        bits_per_token=bits,
+        mean_accuracy=statistics.fmean(values),
+        stdev_accuracy=statistics.stdev(values) if len(values) > 1 else 0.0,
+        seeds=len(values),
+    )
+
+
+def _diagnosis(args: RateDistortionArgs, runs: Sequence[SweepRun]) -> List[RateAccuracyPoint]:
+    return [point for distance in args.distance for point in _rate_accuracy_points(runs, distance)]
+
+
+def _diagnosis_rows(diagnosis: Sequence[RateAccuracyPoint]) -> List[str]:
+    rows = ["| distance | bits/token | mean accuracy | sd | seeds |", "|---|---|---|---|---|"]
+    for point in diagnosis:
+        rows.append(
+            f"| {point.distance} | {point.bits_per_token:.2f} | {point.mean_accuracy:.4f} | "
+            f"{point.stdev_accuracy:.4f} | {point.seeds} |"
+        )
+    return rows
+
+
+def _peak_budget(points: Sequence[RateAccuracyPoint]) -> RateAccuracyPoint:
+    return max(points, key=lambda point: point.mean_accuracy)
+
+
+def _is_inverted(points: Sequence[RateAccuracyPoint]) -> bool:
+    return _peak_budget(points).bits_per_token < max(point.bits_per_token for point in points)
+
+
+def _distance_verdict(distance: str, points: Sequence[RateAccuracyPoint]) -> str:
+    peak = _peak_budget(points)
+    widest = max(points, key=lambda point: point.bits_per_token)
+    return (
+        f"Under `{distance}` accuracy peaks at {peak.bits_per_token:.2f} bits ({peak.mean_accuracy:.4f}) and "
+        f"reads {widest.mean_accuracy:.4f} at {widest.bits_per_token:.2f} bits."
+    )
+
+
+def _inverted_distances(inverted: Dict[str, bool]) -> List[str]:
+    return [distance for distance, flag in inverted.items() if flag]
+
+
+def _partial_inversion_summary(inverted_distances: Sequence[str]) -> str:
+    named = ", ".join(f"`{name}`" for name in inverted_distances)
+    return (
+        f"The inversion appears only under {named}, so it is a metric artifact rather than a property of the "
+        "bit budget."
+    )
+
+
+def _inversion_summary(inverted: Dict[str, bool]) -> str:
+    if len(inverted) < 2:
+        return SINGLE_DISTANCE_SUMMARY
+    inverted_distances = _inverted_distances(inverted)
+    if not inverted_distances:
+        return NO_INVERSION_SUMMARY
+    if len(inverted_distances) == len(inverted):
+        return UNIVERSAL_INVERSION_SUMMARY
+    return _partial_inversion_summary(inverted_distances)
+
+
+def _measured_by_distance(
+    args: RateDistortionArgs, diagnosis: Sequence[RateAccuracyPoint]
+) -> Dict[str, List[RateAccuracyPoint]]:
+    measured: Dict[str, List[RateAccuracyPoint]] = {}
+    for distance in args.distance:
+        points = _rate_accuracy_points_for(diagnosis, distance)
+        if points:
+            measured[distance] = points
+    return measured
+
+
+def _verdict_lines(measured: Dict[str, List[RateAccuracyPoint]]) -> List[str]:
+    return [_distance_verdict(distance, points) for distance, points in measured.items()]
+
+
+def _inversion_flags(measured: Dict[str, List[RateAccuracyPoint]]) -> Dict[str, bool]:
+    return {distance: _is_inverted(points) for distance, points in measured.items()}
+
+
+def _diagnosis_lines(args: RateDistortionArgs, diagnosis: Sequence[RateAccuracyPoint]) -> List[str]:
+    if not diagnosis:
+        return []
+    measured = _measured_by_distance(args, diagnosis)
+    return [
+        "## Rate-accuracy diagnosis",
+        "",
+        "The accuracy column above is one distance at one seed. This section re-runs the rate-accuracy axis under",
+        "every requested distance and seed at a fixed projector, so a peak that moves with the distance can be told",
+        "apart from a peak that belongs to the bit budget. Seeds vary the evaluation sample draw.",
+        "",
+        *_diagnosis_rows(diagnosis),
+        "",
+        *_verdict_lines(measured),
+        "",
+        _inversion_summary(_inversion_flags(measured)),
+        "",
+    ]
+
+
+def _rate_accuracy_points_for(diagnosis: Sequence[RateAccuracyPoint], distance: str) -> List[RateAccuracyPoint]:
+    return [point for point in diagnosis if point.distance == distance]
 
 
 def _distortion_unit(method: str) -> str:
@@ -283,19 +509,25 @@ def _source_flags(args: RateDistortionArgs) -> str:
     return f"--dataset {args.dataset}"
 
 
+def _seed_flag(args: RateDistortionArgs) -> str:
+    return "" if not args.seeds else f" --seeds {' '.join(str(seed) for seed in args.seeds)}"
+
+
 def _reproduce_command(args: RateDistortionArgs) -> str:
     budgets = " ".join(str(budget) for budget in args.budgets)
     methods = " ".join(args.methods)
     accuracy_flag = " --with-accuracy" if args.with_accuracy else ""
     return (
         f"tox -e rate_distortion -- {_source_flags(args)} --budgets {budgets} "
-        f"--methods {methods}{accuracy_flag} --distance {args.distance} "
+        f"--methods {methods}{accuracy_flag} --distance {' '.join(args.distance)}{_seed_flag(args)} "
         f"--max-samples {args.max_samples} --config {args.config} "
         f"--output-path {args.output_path} --figure-path {args.figure_path}"
     )
 
 
-def _report_lines(args: RateDistortionArgs, frontier: RateDistortionFrontier) -> List[str]:
+def _report_lines(
+    args: RateDistortionArgs, frontier: RateDistortionFrontier, diagnosis: Sequence[RateAccuracyPoint] = ()
+) -> List[str]:
     return [
         "# Rate-distortion frontier for semantic color compression",
         "",
@@ -325,6 +557,7 @@ def _report_lines(args: RateDistortionArgs, frontier: RateDistortionFrontier) ->
         "",
         *_pareto_rows(frontier),
         "",
+        *_diagnosis_lines(args, diagnosis),
         "## Reproduce",
         "",
         "```bash",
@@ -343,10 +576,12 @@ def _print_table(frontier: RateDistortionFrontier) -> None:
         print(line)
 
 
-def _write_report(args: RateDistortionArgs, frontier: RateDistortionFrontier) -> None:
+def _write_report(
+    args: RateDistortionArgs, frontier: RateDistortionFrontier, diagnosis: Sequence[RateAccuracyPoint] = ()
+) -> None:
     destination = Path(args.output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text("\n".join(_report_lines(args, frontier)), encoding="utf-8")
+    destination.write_text("\n".join(_report_lines(args, frontier, diagnosis)), encoding="utf-8")
     print(f"Saved {args.output_path}")
 
 
@@ -365,23 +600,44 @@ def _log_startup(args: RateDistortionArgs, config: SynestheticConfig, correlatio
             "budgets": args.budgets,
             "methods": args.methods,
             "with_accuracy": args.with_accuracy,
-            "seed": config.training.seed,
+            "distances": args.distance,
+            "seeds": _resolved_seeds(args, config),
         },
     )
 
 
-def main(args: RateDistortionArgs) -> None:
-    config = SynestheticConfig.from_yaml(args.config)
-    correlation_id = str(uuid.uuid4())
+def _build_sweep_inputs(args: RateDistortionArgs, config: SynestheticConfig, correlation_id: str) -> SweepInputs:
     dataset_repository = _build_dataset_repository(args)
     embedding_adapter = SentenceEmbeddingAdapter()
     color_mapper = create_color_mapper(args.mapper_type, config)
     color_mapper.load_weights(args.model_path)
     _log_startup(args, config, correlation_id)
-    embeddings = _encode_evaluation_embeddings(dataset_repository, embedding_adapter, args, config)
-    frontier = _run_sweep(args, config, dataset_repository, embedding_adapter, color_mapper, embeddings, correlation_id)
+    return SweepInputs(
+        args=args,
+        config=config,
+        dataset_repository=dataset_repository,
+        embedding_adapter=embedding_adapter,
+        color_mapper=color_mapper,
+        embeddings=_encode_evaluation_embeddings(dataset_repository, embedding_adapter, args, config),
+        correlation_id=correlation_id,
+    )
+
+
+def _comparable_diagnosis(args: RateDistortionArgs, runs: Sequence[SweepRun]) -> List[RateAccuracyPoint]:
+    if len(runs) < 2:
+        return []
+    return _diagnosis(args, runs)
+
+
+def main(args: RateDistortionArgs) -> None:
+    _reject_empty_sweep_axes(args)
+    config = SynestheticConfig.from_yaml(args.config)
+    inputs = _build_sweep_inputs(args, config, str(uuid.uuid4()))
+    runs = _run_all_sweeps(inputs)
+    frontier = runs[0].frontier
+    diagnosis = _comparable_diagnosis(args, runs)
     _print_table(frontier)
-    _write_report(args, frontier)
+    _write_report(args, frontier, diagnosis)
     _render_figure(frontier, args.figure_path)
 
 

@@ -53,8 +53,35 @@ is not directly comparable; read each codec's own curve in the figure rather tha
 | color_vq | 12.00 | 6.764355 | ΔE |
 | gzip | 11392.04 | 0.000000 | MSE |
 
+## Rate-accuracy diagnosis
+
+The accuracy column above is one distance at one seed. This section re-runs the rate-accuracy axis under
+every requested distance and seed at a fixed projector, so a peak that moves with the distance can be told
+apart from a peak that belongs to the bit budget. Seeds vary the evaluation sample draw.
+
+| distance | bits/token | mean accuracy | sd | seeds |
+|---|---|---|---|---|
+| jensen_shannon | 3.00 | 0.6433 | 0.0176 | 3 |
+| jensen_shannon | 6.00 | 0.7217 | 0.0161 | 3 |
+| jensen_shannon | 9.00 | 0.7600 | 0.0250 | 3 |
+| jensen_shannon | 12.00 | 0.6067 | 0.0448 | 3 |
+| wasserstein | 3.00 | 0.6483 | 0.0252 | 3 |
+| wasserstein | 6.00 | 0.7217 | 0.0126 | 3 |
+| wasserstein | 9.00 | 0.7883 | 0.0029 | 3 |
+| wasserstein | 12.00 | 0.8050 | 0.0087 | 3 |
+| sliced | 3.00 | 0.6450 | 0.0132 | 3 |
+| sliced | 6.00 | 0.7150 | 0.0132 | 3 |
+| sliced | 9.00 | 0.7833 | 0.0153 | 3 |
+| sliced | 12.00 | 0.7883 | 0.0236 | 3 |
+
+Under `jensen_shannon` accuracy peaks at 9.00 bits (0.7600) and reads 0.6067 at 12.00 bits.
+Under `wasserstein` accuracy peaks at 12.00 bits (0.8050) and reads 0.8050 at 12.00 bits.
+Under `sliced` accuracy peaks at 12.00 bits (0.7883) and reads 0.7883 at 12.00 bits.
+
+The inversion appears only under `jensen_shannon`, so it is a metric artifact rather than a property of the bit budget.
+
 ## Reproduce
 
 ```bash
-tox -e rate_distortion -- --dataset ag_news --budgets 2 4 8 16 --methods color_vq gzip pq --with-accuracy --distance jensen_shannon --max-samples 200 --config configs/base.yaml --output-path reports/rate_distortion.md --figure-path reports/figures/rate_distortion.png
+tox -e rate_distortion -- --dataset ag_news --budgets 2 4 8 16 --methods color_vq gzip pq --with-accuracy --distance jensen_shannon wasserstein sliced --seeds 42 43 44 --max-samples 200 --config configs/base.yaml --output-path reports/rate_distortion.md --figure-path reports/figures/rate_distortion.png
 ```

@@ -84,6 +84,12 @@ class TestReadmeClaimsConsistency:
     def test_should_state_the_committed_133_work_count_when_reading_readme(self) -> None:
         assert_that(_read_readme()).contains("133 works")
 
+    def test_should_not_blame_the_bit_budget_for_the_jensen_shannon_peak_when_reading_readme(self) -> None:
+        assert_that(_read_readme()).does_not_contain("past 9 bits the extra")
+
+    def test_should_cite_the_structure_objective_report_when_reading_readme(self) -> None:
+        assert_that(_read_readme()).contains("reports/structure_objective.md")
+
 
 class TestDesignDocClaimsConsistency:
     def test_should_not_label_the_distance_wasserstein_2_when_reading_design_doc(self) -> None:
@@ -94,6 +100,12 @@ class TestDesignDocClaimsConsistency:
 
     def test_should_not_describe_training_as_random_targets_when_reading_design_doc(self) -> None:
         assert_that(_read_design_doc()).does_not_contain("random targets")
+
+    def test_should_not_blame_the_bit_budget_for_the_jensen_shannon_peak_when_reading_design_doc(self) -> None:
+        assert_that(_read_design_doc()).does_not_contain("12 bits buys perceptual fidelity")
+
+    def test_should_cite_the_structure_objective_report_when_reading_design_doc(self) -> None:
+        assert_that(_read_design_doc()).contains("reports/structure_objective.md")
 
 
 class TestReadmeDoesNotOverclaimInfrastructure:

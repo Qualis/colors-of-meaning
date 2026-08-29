@@ -101,13 +101,17 @@ map naturally onto the interpretable axes the structured mapper targets.
 
 **Why 4,096 colors.** 16 bins per dimension is fine enough to separate meanings and coarse enough
 to keep the code at 12 bits, giving the exact 1024:1 ratio against a 12,288-bit embedding. The
-rate–distortion sweep measures what other budgets cost: mean ΔE falls steeply from 3 to 9 bits
-and downstream accuracy peaks at 9, so 12 bits buys perceptual fidelity rather than task accuracy.
+rate–distortion sweep measures what other budgets cost: mean ΔE falls steeply from 3 to 9 bits, and
+downstream accuracy is highest at 12 bits under both Wasserstein distances. It peaks at 9 only under
+Jensen-Shannon, which saturates on the disjoint supports of a ~3-hot histogram, so that peak is a
+property of the metric rather than of the budget.
 
 **Why a neural projector.** The mapping from semantic space to perceptual space is learned rather
 than hand-specified, and the bottleneck architecture (384→128→64→3) enforces the compression. The
-training objective distils embedding-space similarity structure into color-space distances; the
-supervised variant additionally optimizes a classification head, which is discarded afterwards.
+default training objective distils the embedding cosine-similarity matrix into the cosine similarity
+of batch-mean-centred Lab outputs; the objective is an injected seam, so a ranking or correlation
+criterion over Lab distances can be swapped in and measured. The supervised variant optimizes a
+class-contrastive loss plus a classification head, which is discarded afterwards.
 
 **Why a histogram.** A document as a bag of colors is orderless, like a bag of words, and is
 already a normalized probability distribution, so it works directly with Wasserstein and
@@ -153,7 +157,10 @@ build, deterministic forward pass, exact EMD. Reported figures carry a stated to
 
 - The 384→3 projection is lossy by construction, so fine semantic distinctions collapse into
   nearby colors. The measured structure-preservation correlation is ρ = −0.3904: real structure
-  survives, and a meaningful share does not.
+  survives, and a meaningful share does not. How much of that share the bottleneck actually costs is
+  measured rather than assumed: an untrained projector floors at ρ = −0.0781 and an untrained PCA-3
+  reaches −0.3263, while training on the reported metric reaches −0.5196, so a large part of the
+  residual belonged to the training objective — `reports/structure_objective.md`.
 - Classification accuracy trails both baselines at every matched budget measured.
 - The committed projector is trained on AG News; transfer to sentiment is weak and to 20-class
   topic modest. Per-dataset retraining is not done.

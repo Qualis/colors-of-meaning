@@ -7,15 +7,16 @@ from pathlib import Path
 
 from colors_of_meaning.domain.model.lab_color import LabColor
 from colors_of_meaning.domain.service.color_mapper import ColorMapper
+from colors_of_meaning.infrastructure.ml.structure_objectives import (
+    StructureObjective,
+    cosine_centred,
+)
 from colors_of_meaning.shared.determinism import seed_everything
 
 logger = logging.getLogger(__name__)
 
-
-def offdiagonal_entries(matrix: torch.Tensor) -> torch.Tensor:
-    size = matrix.shape[0]
-    keep = ~torch.eye(size, dtype=torch.bool, device=matrix.device)
-    return matrix[keep]
+LIGHTNESS_SCALE = 100.0
+CHROMA_SCALE = 127.5
 
 
 class LabProjectorNetwork(nn.Module):
@@ -25,6 +26,7 @@ class LabProjectorNetwork(nn.Module):
         hidden_dim_1: int = 128,
         hidden_dim_2: int = 64,
         dropout_rate: float = 0.1,
+        constrain_to_lab: bool = True,
     ) -> None:
         super().__init__()
 
@@ -38,15 +40,19 @@ class LabProjectorNetwork(nn.Module):
             nn.Linear(hidden_dim_2, 3),
         )
 
+        self.constrain_to_lab = constrain_to_lab
         self.l_activation = nn.Sigmoid()
         self.ab_activation = nn.Tanh()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        features = self.network(x)
+        features: torch.Tensor = self.network(x)
 
-        lightness = self.l_activation(features[:, 0:1]) * 100.0
-        a_val = self.ab_activation(features[:, 1:2]) * 127.5
-        b_val = self.ab_activation(features[:, 2:3]) * 127.5
+        if not self.constrain_to_lab:
+            return features
+
+        lightness = self.l_activation(features[:, 0:1]) * LIGHTNESS_SCALE
+        a_val = self.ab_activation(features[:, 1:2]) * CHROMA_SCALE
+        b_val = self.ab_activation(features[:, 2:3]) * CHROMA_SCALE
 
         return torch.cat([lightness, a_val, b_val], dim=1)
 
@@ -60,34 +66,39 @@ class PyTorchColorMapper(ColorMapper):
         dropout_rate: float = 0.1,
         device: str = "cpu",
         seed: int = 42,
+        structure_objective: StructureObjective = cosine_centred,
+        constrain_to_lab: bool = True,
     ) -> None:
         self.device = torch.device(device if torch.cuda.is_available() else "cpu")
+        self.structure_objective = structure_objective
         self._generator = seed_everything(seed)
         self.network = LabProjectorNetwork(
             input_dim=input_dim,
             hidden_dim_1=hidden_dim_1,
             hidden_dim_2=hidden_dim_2,
             dropout_rate=dropout_rate,
+            constrain_to_lab=constrain_to_lab,
         ).to(self.device)
         self._epoch_checkpoints: List[Any] = []
 
     def embed_to_lab(self, embedding: npt.NDArray) -> LabColor:
-        self.network.eval()
-        with torch.no_grad():
-            embedding_tensor = torch.tensor(embedding, dtype=torch.float32, device=self.device).unsqueeze(0)
-            lab_tensor = self.network(embedding_tensor)
-            lab_values = lab_tensor.cpu().numpy()[0]
+        lab_values = self.embed_batch_to_coordinates(embedding.reshape(1, -1))[0]
 
         return LabColor.from_unclamped(lab_values[0], lab_values[1], lab_values[2])
 
     def embed_batch_to_lab(self, embeddings: npt.NDArray) -> List[LabColor]:
+        lab_values = self.embed_batch_to_coordinates(embeddings)
+
+        return [LabColor.from_unclamped(row[0], row[1], row[2]) for row in lab_values]
+
+    def embed_batch_to_coordinates(self, embeddings: npt.NDArray) -> npt.NDArray:
         self.network.eval()
         with torch.no_grad():
             embeddings_tensor = torch.tensor(embeddings, dtype=torch.float32, device=self.device)
             lab_tensor = self.network(embeddings_tensor)
-            lab_values = lab_tensor.cpu().numpy()
+        lab_values: npt.NDArray = lab_tensor.cpu().numpy()
 
-        return [LabColor.from_unclamped(row[0], row[1], row[2]) for row in lab_values]
+        return lab_values
 
     def train(self, embeddings: npt.NDArray, epochs: int, learning_rate: float) -> None:
         self.network.train()
@@ -144,36 +155,7 @@ class PyTorchColorMapper(ColorMapper):
         return loss.item()
 
     def _structure_loss(self, batch_embeddings: torch.Tensor) -> torch.Tensor:
-        lab_output = self.network(batch_embeddings)
-        teacher_similarity = self._teacher_similarity(batch_embeddings)
-        student_similarity = self._student_similarity(lab_output)
-
-        return self._similarity_discrepancy(student_similarity, teacher_similarity)
-
-    def _teacher_similarity(self, embeddings: torch.Tensor) -> torch.Tensor:
-        return self._cosine_similarity_matrix(embeddings).detach()
-
-    def _student_similarity(self, lab_output: torch.Tensor) -> torch.Tensor:
-        centred_lab = lab_output - lab_output.mean(dim=0, keepdim=True)
-        return self._cosine_similarity_matrix(centred_lab)
-
-    @staticmethod
-    def _cosine_similarity_matrix(vectors: torch.Tensor) -> torch.Tensor:
-        normalized = nn.functional.normalize(vectors, p=2, dim=1)
-        return normalized @ normalized.t()
-
-    @staticmethod
-    def _similarity_discrepancy(
-        student_similarity: torch.Tensor,
-        teacher_similarity: torch.Tensor,
-    ) -> torch.Tensor:
-        student_offdiagonal = offdiagonal_entries(student_similarity)
-
-        if student_offdiagonal.numel() == 0:
-            return student_similarity.sum() * 0.0
-
-        teacher_offdiagonal = offdiagonal_entries(teacher_similarity)
-        return nn.functional.mse_loss(student_offdiagonal, teacher_offdiagonal)
+        return self.structure_objective(self.network(batch_embeddings), batch_embeddings)
 
     def save_weights(self, path: str) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)

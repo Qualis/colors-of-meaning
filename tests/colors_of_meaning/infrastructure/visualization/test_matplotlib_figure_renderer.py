@@ -20,6 +20,10 @@ from colors_of_meaning.domain.model.rate_distortion_point import (
     RateDistortionPoint,
 )
 from colors_of_meaning.domain.service.figure_renderer import FigureRenderer
+from colors_of_meaning.domain.model.objective_comparison import (
+    ObjectiveArmResult,
+    ObjectiveComparison,
+)
 from colors_of_meaning.infrastructure.visualization.matplotlib_figure_renderer import (
     FIGURE_DPI,
     _load_tile_image,
@@ -1006,3 +1010,46 @@ class TestSaveFigure:
         MatplotlibFigureRenderer._save_figure(mock_fig, "figure.png")
 
         mock_fig.savefig.assert_called_once_with("figure.png", dpi=150, bbox_inches="tight")
+
+
+def _objective_comparison(controls: bool = True) -> ObjectiveComparison:
+    baseline = ObjectiveArmResult(arm="cosine_centred", mean_rho=-0.39, stdev_rho=0.02, seeds=8)
+    challenger = ObjectiveArmResult(arm="delta_e_correlation", mean_rho=-0.55, stdev_rho=0.03, seeds=8)
+    noise = ObjectiveArmResult(arm="noise", mean_rho=-0.01, stdev_rho=0.01, seeds=8)
+    return ObjectiveComparison(
+        results=[baseline, challenger], baseline_arm="cosine_centred", controls=[noise] if controls else []
+    )
+
+
+class TestRenderObjectiveComparison:
+    def test_should_write_a_figure_when_arms_and_controls_are_supplied(self, tmp_path: Path) -> None:
+        output_path = str(tmp_path / "objectives.png")
+
+        MatplotlibFigureRenderer().render_objective_comparison(_objective_comparison(), output_path)
+
+        assert os.path.getsize(output_path) > 0
+
+    def test_should_write_a_figure_when_no_control_is_supplied(self, tmp_path: Path) -> None:
+        output_path = str(tmp_path / "objectives_without_controls.png")
+
+        MatplotlibFigureRenderer().render_objective_comparison(_objective_comparison(controls=False), output_path)
+
+        assert os.path.getsize(output_path) > 0
+
+    def test_should_label_the_x_axis_with_every_arm_name(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        axis = Mock()
+        with patch(f"{MODULE}.plt") as mock_plt:
+            mock_plt.subplots.return_value = (Mock(), axis)
+            renderer.render_objective_comparison(_objective_comparison(), str(tmp_path / "labels.png"))
+
+        assert axis.set_xticklabels.call_args.args[0] == ["cosine_centred", "delta_e_correlation"]
+
+    def test_should_draw_one_reference_line_per_control(self, tmp_path: Path) -> None:
+        renderer = MatplotlibFigureRenderer()
+        axis = Mock()
+        with patch(f"{MODULE}.plt") as mock_plt:
+            mock_plt.subplots.return_value = (Mock(), axis)
+            renderer.render_objective_comparison(_objective_comparison(), str(tmp_path / "controls.png"))
+
+        assert len([call for call in axis.axhline.call_args_list if "label" in call.kwargs]) == 1

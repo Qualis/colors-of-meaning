@@ -37,6 +37,7 @@ ALL_STAGES=(
   eval-suite
   interpretability
   rate-distortion
+  structure-objective
   compass
   grounding
   documents-figures
@@ -57,7 +58,9 @@ stage_description() {
     interpretability)
       echo "reports/interpretability.md" ;;
     rate-distortion)
-      echo "reports/rate_distortion.md, reports/figures/rate_distortion.png" ;;
+      echo "reports/rate_distortion.md, reports/figures/rate_distortion.png (long-running: 9 sweep cells)" ;;
+    structure-objective)
+      echo "reports/structure_objective.md, reports/figures/structure_objective.png (long-running)" ;;
     compass)
       echo "reports/story_compass.md, reports/figures/story_compass.png" ;;
     grounding)
@@ -332,11 +335,32 @@ stage_rate_distortion() {
     --budgets 2 4 8 16 \
     --methods color_vq gzip pq \
     --with-accuracy \
-    --distance jensen_shannon \
+    --distance jensen_shannon wasserstein sliced \
+    --seeds 42 43 44 \
     --max-samples 200 \
     --config configs/base.yaml \
     --output-path reports/rate_distortion.md \
     --figure-path reports/figures/rate_distortion.png
+}
+
+stage_structure_objective() {
+  run tox -e compare_objectives -- \
+    --dataset ag_news \
+    --arms cosine_centred delta_e_correlation margin_ranking \
+    --controls noise pca3 unconstrained_head unconstrained_head_preclamp committed \
+    --seeds 42 43 44 45 46 47 48 49 \
+    --downstream-top-k 2 \
+    --downstream-controls committed \
+    --downstream-seeds 42 43 44 \
+    --budget 4000 \
+    --distance sliced \
+    --config configs/agnews_run.yaml \
+    --codebook-path "${AGNEWS_CODEBOOK}" \
+    --committed-model-path "${AGNEWS_MODEL}" \
+    --selection-samples 256 \
+    --structure-samples 256 \
+    --output-path reports/structure_objective.md \
+    --figure-path reports/figures/structure_objective.png
 }
 
 stage_compass() {
@@ -491,6 +515,7 @@ dispatch_stage() {
     eval-suite) stage_eval_suite ;;
     interpretability) stage_interpretability ;;
     rate-distortion) stage_rate_distortion ;;
+    structure-objective) stage_structure_objective ;;
     compass) stage_compass ;;
     grounding) stage_grounding ;;
     documents-figures) stage_documents_figures ;;

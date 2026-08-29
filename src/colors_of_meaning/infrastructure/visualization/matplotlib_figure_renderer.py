@@ -13,6 +13,10 @@ from colors_of_meaning.domain.model.color_codebook import ColorCodebook
 from colors_of_meaning.domain.model.colored_document import ColoredDocument
 from colors_of_meaning.domain.model.lab_color import LabColor
 from colors_of_meaning.domain.model.narrative_arc import NarrativeArc
+from colors_of_meaning.domain.model.objective_comparison import (
+    ObjectiveArmResult,
+    ObjectiveComparison,
+)
 from colors_of_meaning.domain.model.rate_distortion_point import (
     RateDistortionFrontier,
     RateDistortionPoint,
@@ -25,6 +29,10 @@ matplotlib.use("Agg")
 FIGURE_DPI = 150
 RATE_DISTORTION_FIGURE_SIZE = (11.0, 7.0)
 NARRATIVE_ARC_FIGURE_SIZE = (11.0, 9.0)
+OBJECTIVE_COMPARISON_FIGURE_SIZE = (10.0, 6.5)
+OBJECTIVE_COMPARISON_BAR_COLOR = "#4c72b0"
+OBJECTIVE_COMPARISON_ERROR_CAPSIZE = 4.0
+OBJECTIVE_COMPARISON_LABEL_ROTATION = 20
 GALLERY_TILE_WIDTH_INCHES = 1.3
 GALLERY_TILE_HEIGHT_INCHES = 1.84
 GALLERY_CAPTION_OFFSET = -0.02
@@ -231,6 +239,38 @@ class MatplotlibFigureRenderer(FigureRenderer):
         distortion_axis.set_title("Rate-distortion frontier for semantic color compression")
         self._merge_legends(distortion_axis, accuracy_axis)
         self._save_figure(fig, output_path, tight=False)
+
+    def render_objective_comparison(self, comparison: ObjectiveComparison, output_path: str) -> None:
+        arms = list(comparison.results)
+        fig, axis = plt.subplots(figsize=OBJECTIVE_COMPARISON_FIGURE_SIZE)
+        positions = list(range(len(arms)))
+
+        axis.bar(
+            positions,
+            [arm.mean_rho for arm in arms],
+            yerr=[arm.stdev_rho for arm in arms],
+            capsize=OBJECTIVE_COMPARISON_ERROR_CAPSIZE,
+            color=OBJECTIVE_COMPARISON_BAR_COLOR,
+        )
+        axis.set_xticks(positions)
+        axis.set_xticklabels([arm.arm for arm in arms], rotation=OBJECTIVE_COMPARISON_LABEL_ROTATION, ha="right")
+        self._draw_control_references(axis, list(comparison.controls))
+        axis.axhline(0.0, color="black", linewidth=0.8)
+        axis.set_ylabel("Held-out Spearman rho (embedding cosine vs Lab delta E)")
+        axis.set_title("Structure preservation by training objective (mean +/- sd over seeds)")
+        self._save_figure(fig, output_path)
+
+    @staticmethod
+    def _draw_control_references(axis: Any, controls: List[ObjectiveArmResult]) -> None:
+        for index, control in enumerate(controls):
+            axis.axhline(
+                control.mean_rho,
+                linestyle="--",
+                color=f"C{index + 1}",
+                label=f"{control.arm} ({control.mean_rho:.4f})",
+            )
+        if controls:
+            axis.legend(loc="best")
 
     def render_a4_gallery(
         self,

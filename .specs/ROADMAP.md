@@ -30,7 +30,12 @@ This roadmap fixes the chain end-to-end (P0), then addresses the blog's secondar
 >
 > `028` closes the last "committed artifact with no committed generator" gap: `tox -e visualize_documents` regenerates the authored-corpus figures (t-SNE, per-author signatures, 133 A4 sheets, A4 gallery) deterministically, and `tox -e authorship` writes `reports/documents_authorship.md`'s computed tables from a real held-out train/eval (data-scaling table cached in the committed `reports/data/authorship_scaling.json`; `--refresh-scaling` re-runs the sweep). Book generation (`reports/book/*`) stays on `tox -e generate` and is inherently non-reproducible (live key, non-deterministic LLM, no seed) — no new environment is warranted for it.
 >
-> The only un-started items are the **§7 research extensions** (R-1 other modalities · R-2 learned/unconstrained target space · R-3 cross-system consistency).
+> `041` closes **R-2** (learned/unconstrained target space) as a measured control arm: the projector's training
+> objective is an injected seam, and `reports/structure_objective.md` reports every objective and every ceiling
+> control — including the Lab head removed, pre- and post-clamp — against a pre-registered adoption rule.
+>
+> The remaining un-started items are the **§7 research extensions** R-1 (other modalities) and R-3 (cross-system
+> consistency).
 
 ---
 

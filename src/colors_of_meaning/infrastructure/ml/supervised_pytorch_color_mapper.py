@@ -7,10 +7,8 @@ from pathlib import Path
 
 from colors_of_meaning.domain.model.lab_color import LabColor
 from colors_of_meaning.domain.service.color_mapper import ColorMapper
-from colors_of_meaning.infrastructure.ml.pytorch_color_mapper import (
-    LabProjectorNetwork,
-    offdiagonal_entries,
-)
+from colors_of_meaning.infrastructure.ml.pytorch_color_mapper import LabProjectorNetwork
+from colors_of_meaning.infrastructure.ml.structure_objectives import offdiagonal_entries
 from colors_of_meaning.shared.determinism import seed_everything
 
 logger = logging.getLogger(__name__)

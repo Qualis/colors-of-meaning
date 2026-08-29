@@ -66,6 +66,18 @@ to closer colors — and −1 would be perfect preservation, so |ρ| ≈ 0.39 is
 neighborhood preservation: real structure survives the 12-bit color, and a meaningful share is
 lost.
 
+**What that share is lost to.** The projector was scored on ρ but never trained on it, so the
+residual could never be attributed. Training the same architecture on the metric it is judged by
+moves ρ to −0.5196 ± 0.0024 over 8 seeds, against −0.4182 ± 0.0156 for today's objective — while an
+untrained projector floors at −0.0781 and an untrained PCA-3 already reaches −0.3263. Removing the
+Lab gamut head does not help (−0.3833 clamped, −0.4135 pre-clamp), so most of the gap belonged to
+the objective rather than to three dimensions. The shipped projector is nevertheless unchanged: it
+is trained by the supervised mapper, and on the same held-out slice at the matched 4,000 budget it
+scores 0.8106 against the better-correlated arm's 0.7351 — ρ and task accuracy do not move together
+across mapper families.
+The pre-registered rule, the seed error bars and both controls are in
+[`reports/structure_objective.md`](reports/structure_objective.md).
+
 ### Authorship on real prose
 
 A Project Gutenberg corpus of 22 authors and 133 works is a first-class dataset source: the
@@ -85,13 +97,16 @@ between 150 and 300 — [`reports/documents_authorship.md`](reports/documents_au
 The 1024:1 headline is one operating point. Sweeping the bit budget turns it into a measured
 frontier against gzip and Product Quantization at matched budgets. Color-VQ's mean ΔE falls from
 117.2 at 3 bits to 6.8 at 12 bits, while gzip stays lossless at ~11,400 bits/token. Downstream
-retrieval accuracy peaks at 9 bits (76.0%) and drops at 12 (63.0%), so past 9 bits the extra
-resolution costs accuracy as well as space —
+accuracy rises with the budget and is highest at 12 bits: 0.8050 under exact Earth-Mover distance
+and 0.7883 under the sliced proxy, both over 3 seeds. Jensen-Shannon is the exception — it peaks at
+9 bits (0.7600) and falls to 0.6067 at 12 — because at 4,096 bins a 1-3 sentence item is a ~3-hot
+histogram and JS saturates on disjoint supports. The earlier reading of that drop as a cost of the
+bit budget was a metric artifact —
 [`reports/rate_distortion.md`](reports/rate_distortion.md), and the same sweep over the authored
 corpus in [`reports/documents_rate_distortion.md`](reports/documents_rate_distortion.md).
 
 ```bash
-tox -e rate_distortion -- --dataset ag_news --budgets 2 4 8 16 --methods color_vq gzip pq --with-accuracy --distance jensen_shannon --max-samples 200 --config configs/base.yaml
+tox -e rate_distortion -- --dataset ag_news --budgets 2 4 8 16 --methods color_vq gzip pq --with-accuracy --distance jensen_shannon wasserstein sliced --seeds 42 43 44 --max-samples 200 --config configs/base.yaml
 ```
 
 ### Interpretable axes

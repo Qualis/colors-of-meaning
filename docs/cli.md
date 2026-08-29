@@ -196,11 +196,50 @@ tox -e rate_distortion -- --source documents --documents-dir ./documents --with-
 ```
 
 - `--budgets` (`2 4 8 16`) — bins per dimension, not bits
-- `--methods` (`color_vq gzip pq`), `--with-accuracy` (off), `--distance` (`wasserstein`),
+- `--methods` (`color_vq gzip pq`), `--with-accuracy` (off), `--distance` (`wasserstein`;
+  repeatable, one of `wasserstein`, `sliced`, `jensen_shannon`), `--seeds` (the configured seed),
   `--k-neighbors` (`5`), `--max-samples` (`400`)
 - `--output-path` (`reports/rate_distortion.md`), `--figure-path`
   (`reports/figures/rate_distortion.png`)
 - the authored-corpus source flags listed under `train`
+
+Passing more than one `--distance`, or more than one `--seeds`, adds a rate-accuracy diagnosis
+section when `--with-accuracy` is also set: the accuracy axis is re-measured under every distance and
+seed at a fixed projector, so a
+peak that moves with the distance can be told apart from one that belongs to the bit budget. The
+first (distance, seed) pair produces the primary tables and the figure; the later sweeps measure the
+colour codec alone. A single (distance, seed) cell writes no diagnosis, because one metric cannot
+attribute the shape of the curve.
+
+### `compare_objectives`
+
+Train the projector under each candidate structure objective and score every arm on the held-out
+Spearman correlation it is actually judged by, with untrained, linear and unconstrained-head
+controls bounding what three dimensions can hold. A pre-registered rule — a margin of more than
+2 pooled seed standard deviations on |ρ| plus an accuracy guard — decides whether the committed
+projector is replaced.
+
+```bash
+tox -e compare_objectives -- --dataset ag_news --arms cosine_centred delta_e_correlation \
+  margin_ranking --controls noise pca3 unconstrained_head unconstrained_head_preclamp committed \
+  --seeds 42 43 44 45 46 47 48 49 --downstream-top-k 2 --downstream-controls committed --budget 4000
+```
+
+- `--arms` (`cosine_centred delta_e_correlation margin_ranking`), `--controls` (`noise pca3
+  unconstrained_head unconstrained_head_preclamp committed`), `--seeds` (`42`–`49`) — the
+  `committed` control reads the shipped projector off disk and scores it on the same held-out slice
+- `--downstream-arms` (empty), `--downstream-top-k` (`2`), `--downstream-controls` (`committed`),
+  `--downstream-seeds` (`42 43 44`), `--budget` (`4000`), `--distance` (`sliced`), `--k-neighbors` (`5`),
+  `--k-values` (`1 5 10`) — the nominated arms are the baseline plus the strongest challengers, and every
+  listed control is measured downstream too, so the decision can be read against the shipped artifact
+- `--train-samples` (the configured `dataset.max_samples`), `--selection-samples` (`256`),
+  `--structure-samples` (`256`) — the selection and structure slices are disjoint halves of one
+  held-out draw from the test split
+- `--adoption-threshold-sigma` (`2.0`), `--max-accuracy-drop` (`0.01`), `--model-dir`
+  (`artifacts/objectives`), `--codebook-path` (`codebook_4096`), `--committed-model-path`
+  (`artifacts/models/projector.pth`)
+- `--output-path` (`reports/structure_objective.md`), `--figure-path`
+  (`reports/figures/structure_objective.png`)
 
 ### `interpretability`
 

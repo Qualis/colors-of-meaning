@@ -11,7 +11,10 @@ from unittest.mock import patch
 from colors_of_meaning.infrastructure.ml.pytorch_color_mapper import (
     PyTorchColorMapper,
     LabProjectorNetwork,
-    offdiagonal_entries,
+)
+from colors_of_meaning.infrastructure.ml.structure_objectives import (
+    cosine_centred,
+    delta_e_correlation,
 )
 from colors_of_meaning.domain.model.lab_color import LabColor
 from colors_of_meaning.shared.lab_utils import delta_e
@@ -66,6 +69,53 @@ class TestLabProjectorNetwork:
         assert torch.all(output[:, 0] >= 0) and torch.all(output[:, 0] <= 100)
         assert torch.all(output[:, 1] >= -127.5) and torch.all(output[:, 1] <= 127.5)
         assert torch.all(output[:, 2] >= -127.5) and torch.all(output[:, 2] <= 127.5)
+
+
+class TestUnconstrainedLabHead:
+    def test_should_escape_the_lab_ranges_when_the_head_is_removed(self) -> None:
+        network = LabProjectorNetwork(input_dim=4, hidden_dim_1=4, hidden_dim_2=3, constrain_to_lab=False)
+        with torch.no_grad():
+            network.network[-1].bias.fill_(500.0)
+
+        output = network(torch.zeros(2, 4))
+
+        assert torch.all(output > 127.5)
+
+    def test_should_stay_inside_the_lab_ranges_when_the_head_is_kept(self) -> None:
+        network = LabProjectorNetwork(input_dim=4, hidden_dim_1=4, hidden_dim_2=3, constrain_to_lab=True)
+        with torch.no_grad():
+            network.network[-1].bias.fill_(500.0)
+
+        output = network(torch.zeros(2, 4))
+
+        assert torch.all(output[:, 0] <= 100.0) and torch.all(output[:, 1:].abs() <= 127.5)
+
+    def test_should_expose_unclamped_coordinates_when_the_mapper_head_is_removed(self) -> None:
+        mapper = PyTorchColorMapper(input_dim=4, hidden_dim_1=4, hidden_dim_2=3, seed=4, constrain_to_lab=False)
+        with torch.no_grad():
+            mapper.network.network[-1].bias.fill_(500.0)
+
+        coordinates = mapper.embed_batch_to_coordinates(np.zeros((2, 4), dtype=np.float32))
+
+        assert np.all(coordinates > 127.5)
+
+
+class TestInjectedStructureObjective:
+    def test_should_default_to_the_cosine_centred_objective(self) -> None:
+        mapper = PyTorchColorMapper(input_dim=4, device="cpu")
+
+        assert mapper.structure_objective is cosine_centred
+
+    def test_should_delegate_the_structure_loss_to_the_injected_objective(self) -> None:
+        mapper = PyTorchColorMapper(input_dim=4, seed=6, structure_objective=delta_e_correlation)
+        batch = torch.tensor(np.random.default_rng(2).normal(size=(5, 4)), dtype=torch.float32)
+        mapper.network.eval()
+
+        with torch.no_grad():
+            loss = mapper._structure_loss(batch)
+            expected = delta_e_correlation(mapper.network(batch), batch)
+
+        assert loss.item() == pytest.approx(expected.item(), abs=1e-7)
 
 
 class TestPyTorchColorMapper:
@@ -162,24 +212,6 @@ class TestPyTorchColorMapper:
         anchor = mapper.embed_to_lab(embeddings[0])
         dissimilar = mapper.embed_to_lab(embeddings[5])
         assert delta_e(anchor, dissimilar) > 20.0
-
-    def test_should_lower_structure_loss_when_student_matches_teacher_ordering(self) -> None:
-        teacher = torch.tensor([[1.0, 0.9, 0.1], [0.9, 1.0, 0.2], [0.1, 0.2, 1.0]])
-        student_aligned = teacher.clone()
-        student_inverted = torch.tensor([[1.0, 0.1, 0.9], [0.1, 1.0, 0.8], [0.9, 0.8, 1.0]])
-
-        aligned_loss = PyTorchColorMapper._similarity_discrepancy(student_aligned, teacher)
-        inverted_loss = PyTorchColorMapper._similarity_discrepancy(student_inverted, teacher)
-
-        assert aligned_loss.item() < inverted_loss.item()
-
-    def test_should_exclude_self_pairs_when_building_offdiagonal_similarity(self) -> None:
-        matrix = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-
-        entries = offdiagonal_entries(matrix)
-
-        expected = torch.tensor([2.0, 3.0, 4.0, 6.0, 7.0, 8.0])
-        assert torch.equal(torch.sort(entries).values, expected)
 
     def test_should_produce_finite_structure_loss_when_batch_is_typical(self) -> None:
         torch.manual_seed(0)
