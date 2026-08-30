@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -101,6 +102,12 @@ def _held_artifact_comparison() -> ObjectiveComparison:
 
 def _comparison(*results: ObjectiveArmResult, controls=()) -> ObjectiveComparison:
     return ObjectiveComparison(results=list(results), baseline_arm=BASELINE_ARM, controls=list(controls))
+
+
+def _committed_artifact(tmp_path) -> Path:
+    artifact = tmp_path / "projector.pth"
+    artifact.write_bytes(b"")
+    return artifact
 
 
 def _stash_checkpoint(train_use_case: Mock) -> float:
@@ -416,6 +423,7 @@ class TestCompareObjectivesCli:
         args = CompareObjectivesArgs(
             output_path=str(tmp_path / "structure_objective.md"),
             figure_path=str(tmp_path / "structure_objective.png"),
+            committed_model_path=str(_committed_artifact(tmp_path)),
             selection_samples=2,
             structure_samples=4,
             **overrides,
@@ -638,8 +646,10 @@ class TestRequestValidation:
 
         assert _reject_unrunnable_request(args) is None
 
-    def test_should_accept_the_default_request(self) -> None:
-        assert _reject_unrunnable_request(CompareObjectivesArgs()) is None
+    def test_should_accept_the_default_request(self, tmp_path) -> None:
+        args = CompareObjectivesArgs(committed_model_path=str(_committed_artifact(tmp_path)))
+
+        assert _reject_unrunnable_request(args) is None
 
 
 class TestBitsPerToken:

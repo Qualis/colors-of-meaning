@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import torch
+import torch.nn as nn
 
 from colors_of_meaning.infrastructure.ml.pytorch_color_mapper import PyTorchColorMapper
 from colors_of_meaning.infrastructure.ml.structure_objectives import (
@@ -15,7 +16,26 @@ from colors_of_meaning.infrastructure.ml.structure_objectives import (
 )
 
 ARCHIVED_COSINE_CENTRED_LOSS = 1.0927273035049438
+ARCHIVED_LOSS_TOLERANCE = 1e-5
 OBJECTIVES = [cosine_centred, delta_e_correlation, margin_ranking]
+
+
+def _pre_refactor_structure_loss(lab_output: torch.Tensor, teacher_embeddings: torch.Tensor) -> torch.Tensor:
+    normalised_teacher = nn.functional.normalize(teacher_embeddings, p=2, dim=1)
+    teacher_similarity = (normalised_teacher @ normalised_teacher.t()).detach()
+    centred_lab = lab_output - lab_output.mean(dim=0, keepdim=True)
+    normalised_student = nn.functional.normalize(centred_lab, p=2, dim=1)
+    student_similarity = normalised_student @ normalised_student.t()
+    keep = ~torch.eye(len(lab_output), dtype=torch.bool)
+    return nn.functional.mse_loss(student_similarity[keep], teacher_similarity[keep])
+
+
+def _archived_batch() -> tuple:
+    mapper = PyTorchColorMapper(input_dim=8, hidden_dim_1=6, hidden_dim_2=4, dropout_rate=0.0, seed=17)
+    generator = np.random.default_rng(3)
+    batch = torch.tensor(generator.normal(size=(6, 8)), dtype=torch.float32)
+    mapper.network.eval()
+    return mapper, batch
 
 
 def _teacher_embeddings() -> torch.Tensor:
@@ -84,16 +104,22 @@ class TestPairwiseLabDistance:
 
 
 class TestCosineCentred:
-    def test_should_match_the_archived_reference_value_when_run_on_the_fixed_batch(self) -> None:
-        mapper = PyTorchColorMapper(input_dim=8, hidden_dim_1=6, hidden_dim_2=4, dropout_rate=0.0, seed=17)
-        generator = np.random.default_rng(3)
-        batch = torch.tensor(generator.normal(size=(6, 8)), dtype=torch.float32)
-        mapper.network.eval()
+    def test_should_reproduce_the_pre_refactor_loss_exactly_on_the_fixed_batch(self) -> None:
+        mapper, batch = _archived_batch()
+
+        with torch.no_grad():
+            loss = mapper._structure_loss(batch)
+            expected = _pre_refactor_structure_loss(mapper.network(batch), batch)
+
+        assert loss.item() == expected.item()
+
+    def test_should_stay_within_tolerance_of_the_archived_reference_value(self) -> None:
+        mapper, batch = _archived_batch()
 
         with torch.no_grad():
             loss = mapper._structure_loss(batch)
 
-        assert loss.item() == pytest.approx(ARCHIVED_COSINE_CENTRED_LOSS, abs=1e-7)
+        assert loss.item() == pytest.approx(ARCHIVED_COSINE_CENTRED_LOSS, abs=ARCHIVED_LOSS_TOLERANCE)
 
     def test_should_ignore_radial_magnitude_when_an_antipodal_pair_moves_along_its_ray(self) -> None:
         teacher = _teacher_embeddings()[:6]
