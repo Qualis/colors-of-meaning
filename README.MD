@@ -73,10 +73,9 @@ untrained projector floors at −0.0781 and an untrained PCA-3 already reaches �
 Lab gamut head does not help (−0.3833 clamped, −0.4135 pre-clamp), so most of the gap belonged to
 the objective rather than to three dimensions. The shipped projector is nevertheless unchanged: it
 is trained by the supervised mapper, and on the same held-out slice at the matched 4,000 budget it
-scores 0.8106 against the better-correlated arm's 0.7351 — ρ and task accuracy do not move together
-across mapper families.
-The pre-registered rule, the seed error bars and both controls are in
-[`reports/structure_objective.md`](reports/structure_objective.md).
+scores 0.8106 against the better-correlated arm's 0.7351 — ρ and task accuracy do not move
+together across mapper families. The pre-registered rule, the seed error bars and both controls
+are in [`reports/structure_objective.md`](reports/structure_objective.md).
 
 ### Authorship on real prose
 
@@ -138,6 +137,11 @@ tox -e interpretability -- --config configs/interpretability.yaml --dataset imdb
 
 - Color classification trails TF-IDF and HNSW at every matched budget measured here. The
   compression is real and so is the accuracy cost.
+- Structure preservation is not a proxy for task accuracy, and the shipped projector is
+  deliberately not the best-correlated one available. The strongest objective measured reaches
+  ρ = −0.5196 but scores 0.7351 on AG News at the matched 4,000 budget; the shipped projector sits
+  at ρ = −0.3811 and scores 0.8106. A pre-registered rule decided which one ships, and
+  [`reports/structure_objective.md`](reports/structure_objective.md) records it either way.
 - The committed projector is trained on AG News. It transfers weakly to sentiment and modestly to
   20-class topic.
 - The `documents/` corpus is git-ignored, so authorship results, per-book figures, and
