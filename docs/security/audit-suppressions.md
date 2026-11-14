@@ -12,14 +12,15 @@ dependency groups that `tox -e build` and `tox -e publish` install with `--only-
 `setuptools_scm`), which are resolved fresh into an isolated environment on every wheel build —
 see the coverage gaps below.
 
-**Last reviewed:** 2026-08-27
+**Last reviewed:** 2026-11-14
 
 ## Active suppressions
 
 | ID | Package | Installed | Fix version | Rationale | Review by |
 |----|---------|-----------|-------------|-----------|-----------|
-| PYSEC-2026-3447 | setuptools | 81.0.0 | 83.0.0 | Held at 81.0.0 by `uv.lock` and not independently upgradable: `torch` 2.12.1 declares `Requires-Dist: setuptools<82`, so the pinned torch caps setuptools below the fix version. Clearing this advisory therefore depends on the torch bump below, not on a separate setuptools bump. This is the runtime/`testing`-extra copy — the one `pip-audit` actually sees. | 2026-10-29 |
-| PYSEC-2025-194 | torch | 2.12.1 | 2.13.0 | `torch` is held at 2.12.1 by `constraint-dependencies` in `pyproject.toml` for reproducibility of the committed evaluation results. Bumping to ≥2.13.0 shifts the whole ML stack and requires re-validating the pipeline and regenerating reported numbers; scheduled as a deliberate, separately-verified change. Load-bearing only on macOS — see the coverage gap below. | 2026-10-29 |
+| PYSEC-2026-3447 | setuptools | 81.0.0 | 83.0.0 | Held at 81.0.0 by `uv.lock` and not independently upgradable: `torch` 2.12.1 declares `Requires-Dist: setuptools<82`, so the pinned torch caps setuptools below the fix version. Clearing this advisory therefore depends on the torch bump below, not on a separate setuptools bump. This is the runtime/`testing`-extra copy — the one `pip-audit` actually sees. | 2027-01-11 |
+| GHSA-xmj3-9gf7-h52w | setuptools | 81.0.0 | 84.1.0 | Same torch cap as PYSEC-2026-3447: the fix is above `setuptools<82`, so it clears with the torch bump, not separately. Low severity, Windows-only path escape in setuptools' legacy `Wheel.install_as_egg` path; the gate environment is installed by uv, which never routes a wheel through that path. | 2027-01-11 |
+| PYSEC-2025-194 | torch | 2.12.1 | 2.13.0 | `torch` is held at 2.12.1 by `constraint-dependencies` in `pyproject.toml` for reproducibility of the committed evaluation results. Bumping to ≥2.13.0 shifts the whole ML stack and requires re-validating the pipeline and regenerating reported numbers; scheduled as a deliberate, separately-verified change. Load-bearing only on macOS — see the coverage gap below. | 2027-01-11 |
 
 ## Dependabot ignore list
 
@@ -61,6 +62,19 @@ lock forward, recorded so the default is visibly "upgrade", not "suppress".
 |----|---------|-----|-----|------|
 | PYSEC-2026-3716 | datasets | 5.0.0 | 5.0.1 | 2026-08-27 |
 | PYSEC-2026-3721 | pip (transitive, via `pip-api` ← `pip-audit`) | 26.1.2 | 26.2.1 | 2026-08-27 |
+| CVE-2026-111063, CVE-2026-111064, CVE-2026-111065, CVE-2026-111066, CVE-2026-111748, CVE-2026-111749, CVE-2026-111750, CVE-2026-123817, GHSA-2g87-pp6c-29x5 | aiohttp | 3.14.3 | 3.14.5 | 2026-11-14 |
+| PYSEC-2026-4320 | certifi | 2026.7.22 | 2026.10.23 | 2026-11-14 |
+| CVE-2026-112907, CVE-2026-112908, CVE-2026-112909, CVE-2026-112910, CVE-2026-112911, CVE-2026-112913, CVE-2026-112915, CVE-2026-112935, CVE-2026-112936, CVE-2026-112938, CVE-2026-112939, CVE-2026-112940 | filelock | 3.32.0 | 4.2.7 | 2026-11-14 |
+| PYSEC-2026-4217 | fsspec | 2026.4.0 | 2026.6.0 | 2026-11-14 |
+| CVE-2026-114613 | msgpack | 1.2.1 | 1.2.4 | 2026-11-14 |
+| PYSEC-2026-4244 | multidict | 6.7.1 | 6.9.1 | 2026-11-14 |
+| CVE-2026-96638, CVE-2026-96640, CVE-2026-96778, CVE-2026-112390, CVE-2026-112391, CVE-2026-112393, CVE-2026-112395, CVE-2026-112399, CVE-2026-112400, CVE-2026-112401, CVE-2026-112404, CVE-2026-112406, CVE-2026-112891, CVE-2026-112892, CVE-2026-112893, CVE-2026-112894, CVE-2026-112895, CVE-2026-112897, CVE-2026-112899, CVE-2026-112900, CVE-2026-128066, CVE-2026-128067, GHSA-78g4-xqwv-q3g8, PYSEC-2026-4326 – PYSEC-2026-4343, PYSEC-2026-4363 | pillow | 12.3.0 | 13.0.0 | 2026-11-14 |
+| PYSEC-2026-4175, PYSEC-2026-4176, PYSEC-2026-4177 | urllib3 | 2.7.0 | 2.8.0 | 2026-11-14 |
+
+filelock 4 and pillow 13 are major bumps the fixes require. Reaching them also moved the
+packages their fix versions declare as floors — `virtualenv` 21.7.0 → 21.15.2 (the first line to
+admit `filelock<5`), with its `packaging` 26.3 and `python-discovery` 1.9.1 floors, and `yarl`
+1.24.5 → 1.25.1 for `aiohttp` — and nothing else in the closure.
 
 ## Pruned suppressions
 
