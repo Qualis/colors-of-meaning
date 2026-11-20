@@ -29,6 +29,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     end
 
     development.vm.hostname = 'colors-of-meaning-vagrant'
+    development.vm.network :forwarded_port, id: 'ssh', guest: 22, host: 2222, host_ip: '127.0.0.1'
 
     development.vm.provision :ansible do |ansible|
       ansible.playbook = PLAYBOOK
