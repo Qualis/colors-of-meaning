@@ -172,6 +172,16 @@ python .claude/skills/self-documenting-refactor/scripts/find_comments.py src/
 
 ---
 
+## Reasoning Skills
+
+### 11. Sequential Thinking
+**Directory:** `sequential-thinking/`
+**Trigger phrases:** "think through", "break down", "analyze step by step", "reason about"
+
+**Purpose:** Works through complex problems in sequential steps with revision, branching, hypothesis generation, and verification, then reports a verified conclusion and the evidence behind it.
+
+---
+
 ## How Claude Code Uses Skills
 
 ### Automatic Invocation
@@ -181,6 +191,7 @@ Claude Code automatically loads and applies skills when trigger phrases are dete
 - User: "This code has comments, make it clearer" → Loads Self-Documenting Refactorer
 - User: "I need to debug this test failure" → Loads Systematic Debugging
 - User: "Implement the login feature" → Loads Test-Driven Development
+- User: "Think through the trade-offs of this approach" → Loads Sequential Thinking
 
 ### Manual Invocation
 You can also explicitly invoke skills:
@@ -191,6 +202,7 @@ You can also explicitly invoke skills:
 - `/test-driven-development` - Load TDD methodology guidance
 - `/systematic-debugging` - Load debugging methodology guidance
 - `/verification-before-completion` - Load completion verification guidance
+- `/sequential-thinking` - Load step-by-step reasoning guidance
 
 ### Progressive Disclosure
 Skills use progressive disclosure:
@@ -277,4 +289,4 @@ Check all skills are present:
 ls -la .claude/skills/*/SKILL.md
 ```
 
-Expected output: 10 SKILL.md files
+Expected output: 11 SKILL.md files
